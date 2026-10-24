@@ -15,6 +15,17 @@ add_library(${CMAKE_PROJECT_NAME} MODULE)
 find_package(libobs REQUIRED)
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE OBS::libobs)
 
+include(cmake/vcast/mbedtls.cmake)
+include(cmake/vcast/ffmpeg.cmake)
+target_link_libraries(
+  ${CMAKE_PROJECT_NAME}
+  PRIVATE mbedtls mbedx509 mbedcrypto VcastFFmpeg::avcodec VcastFFmpeg::avformat VcastFFmpeg::avutil
+)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  # Keep our statically linked mbedTLS private so it never clashes with another copy in OBS.
+  target_link_options(${CMAKE_PROJECT_NAME} PRIVATE "LINKER:--exclude-libs,ALL")
+endif()
+
 # The Vcast dock needs the OBS frontend API and Qt.
 find_package(obs-frontend-api REQUIRED)
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE OBS::obs-frontend-api)
