@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cast to OBS - Vcast</title>
+<style>
+:root {
+  --bg: #f6f7f9; --card: #ffffff; --text: #1d2330; --muted: #5b6475; --accent: #3b6cf6;
+  --accent-text: #ffffff; --danger: #d64545; --border: #dde1e8; --ok: #1f9d55;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #14171d; --card: #1d222b; --text: #e8ebf1; --muted: #9aa3b5; --accent: #6b8fff;
+          --accent-text: #0d1220; --danger: #ff6b6b; --border: #2e3542; --ok: #4ade80; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+       background: var(--bg); color: var(--text); }
+main { max-width: 640px; margin: 0 auto; padding: 24px 16px 48px; }
+h1 { font-size: 1.6rem; margin: 0 0 4px; }
+.sub { color: var(--muted); margin: 0 0 20px; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 16px; }
+.card h2 { font-size: 1.05rem; margin: 0 0 10px; }
+label { display: block; font-weight: 600; margin: 10px 0 6px; }
+select { width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--border);
+         background: var(--bg); color: var(--text); font-size: 1rem; }
+.row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+.row label { display: flex; align-items: center; gap: 8px; font-weight: 400; margin: 0; }
+button { appearance: none; border: 0; border-radius: 12px; padding: 14px 20px; font-size: 1.05rem;
+         font-weight: 600; cursor: pointer; }
+.primary { background: var(--accent); color: var(--accent-text); width: 100%; margin-top: 16px; }
+.danger { background: var(--danger); color: #fff; width: 100%; margin-top: 12px; }
+button:disabled { opacity: .5; cursor: default; }
+#status { margin-top: 14px; min-height: 1.5em; color: var(--muted); }
+#status.ok { color: var(--ok); }
+#status.err { color: var(--danger); }
+video { width: 100%; border-radius: 10px; margin-top: 14px; background: #000; display: none; }
+ol { padding-left: 20px; margin: 6px 0 0; }
+li { margin: 4px 0; }
+.hidden { display: none; }
+a.button { display: block; text-align: center; text-decoration: none; background: var(--accent);
+           color: var(--accent-text); border-radius: 12px; padding: 14px; font-weight: 600; margin-top: 10px; }
+code { background: var(--bg); padding: 1px 6px; border-radius: 6px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Cast to OBS</h1>
+  <p class="sub">Show this device's screen in OBS on the same network.</p>
+
+  <section class="card" id="share-card">
+    <h2>Share this screen</h2>
+    <div id="receiver-wrap">
+      <label for="receiver">Cast to</label>
+      <select id="receiver"></select>
+    </div>
+    <div class="row">
+      <label><input type="checkbox" id="audio" checked> Include sound</label>
+      <label>Quality
+        <select id="quality" style="width:auto">
+          <option value="1080">1080p</option>
+          <option value="720">720p</option>
+          <option value="1440">1440p</option>
+        </select>
+      </label>
+    </div>
+    <button class="primary" id="start">Share screen</button>
+    <button class="danger hidden" id="stop">Stop sharing</button>
+    <div id="status"></div>
+    <video id="preview" muted playsinline autoplay></video>
+  </section>
+
+  <section class="card hidden" id="unsupported">
+    <h2>This browser can't share its screen</h2>
+    <p id="unsupported-text">Open this page on a laptop or desktop in Chrome, Edge, Firefox or Safari.</p>
+  </section>
+
+  <section class="card" id="iphone">
+    <h2>iPhone, iPad or Mac</h2>
+    <ol>
+      <li>Open <b>Control Center</b> (on Mac: the menu bar).</li>
+      <li>Tap <b>Screen Mirroring</b>.</li>
+      <li>Choose <b id="airplay-name">the OBS receiver</b>.</li>
+    </ol>
+  </section>
+
+  <section class="card" id="android">
+    <h2>Android phone or tablet</h2>
+    <p>Install the free Vcast app, open it, and tap the OBS receiver.</p>
+    <a class="button hidden" id="apk" href="/android">Download the Vcast app (APK)</a>
+    <p id="no-apk" class="sub hidden">Get the Vcast app from the Vcast releases page.</p>
+  </section>
+</main>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const statusEl = $('status');
+  let ws = null, recorder = null, stream = null, sendChain = Promise.resolve(), stopping = false;
+
+  function setStatus(text, kind) {
+    statusEl.textContent = text;
+    statusEl.className = kind || '';
+  }
+
+  function deviceName() {
+    const ua = navigator.userAgent;
+    const browser = /Edg\//.test(ua) ? 'Edge' : /Firefox\//.test(ua) ? 'Firefox' :
+      /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : 'Browser';
+    const os = /Windows/.test(ua) ? 'Windows' : /Mac OS X/.test(ua) ? 'Mac' : /CrOS/.test(ua) ? 'Chromebook' :
+      /Android/.test(ua) ? 'Android' : /Linux/.test(ua) ? 'Linux' : /iPhone|iPad/.test(ua) ? 'iOS' : 'computer';
+    return browser + ' on ' + os;
+  }
+
+  const canShare = window.isSecureContext && navigator.mediaDevices &&
+    typeof navigator.mediaDevices.getDisplayMedia === 'function' && typeof MediaRecorder !== 'undefined';
+  const isPhone = /Android|iPhone|iPad|iPod/.test(navigator.userAgent) && !/Windows|CrOS/.test(navigator.userAgent);
+
+  if (!canShare) {
+    $('share-card').classList.add('hidden');
+    $('unsupported').classList.remove('hidden');
+    if (/iPhone|iPad|iPod/.test(navigator.userAgent))
+      $('unsupported-text').textContent = 'On iPhone and iPad, use Screen Mirroring as shown below.';
+    else if (/Android/.test(navigator.userAgent))
+      $('unsupported-text').textContent = 'On Android, use the Vcast app as shown below.';
+  }
+  if (isPhone) {
+    // Put the instructions for this phone first.
+    const first = /Android/.test(navigator.userAgent) ? $('android') : $('iphone');
+    first.parentNode.insertBefore(first, $('share-card'));
+  }
+
+  async function loadReceivers() {
+    try {
+      const res = await fetch('/api/receivers', { cache: 'no-store' });
+      const data = await res.json();
+      const select = $('receiver');
+      const current = select.value;
+      select.innerHTML = '';
+      for (const r of data.receivers) {
+        const opt = document.createElement('option');
+        opt.value = r.id;
+        opt.textContent = r.name + (r.busy ? ' - showing ' + r.busy : '');
+        select.appendChild(opt);
+      }
+      if (current) select.value = current;
+      $('receiver-wrap').classList.toggle('hidden', data.receivers.length < 2);
+      if (data.receivers.length) $('airplay-name').textContent = data.receivers[0].name;
+      $('apk').classList.toggle('hidden', !data.android_app);
+      $('no-apk').classList.toggle('hidden', !!data.android_app);
+      if (!data.receivers.length && !recorder) {
+        $('start').disabled = true;
+        setStatus('No Vcast receiver is set up in OBS. Add a "Vcast Screen Receiver" source.', 'err');
+      } else if (!recorder) {
+        $('start').disabled = false;
+        if (statusEl.className === 'err' && statusEl.textContent.startsWith('No Vcast')) setStatus('');
+      }
+    } catch (e) {
+      setStatus('Could not reach OBS.', 'err');
+    }
+  }
+
+  function pickMimeType(hasAudio) {
+    const candidates = hasAudio
+      ? ['video/webm;codecs=h264,opus', 'video/webm;codecs=vp8,opus', 'video/webm;codecs=vp9,opus',
+         'video/mp4;codecs=avc1.42E01F,mp4a.40.2', 'video/webm', 'video/mp4']
+      : ['video/webm;codecs=h264', 'video/webm;codecs=vp8', 'video/webm;codecs=vp9',
+         'video/mp4;codecs=avc1.42E01F', 'video/webm', 'video/mp4'];
+    return candidates.find((t) => MediaRecorder.isTypeSupported(t)) || '';
+  }
+
+  function cleanup(message, kind) {
+    stopping = true;
+    if (recorder && recorder.state !== 'inactive') {
+      try { recorder.stop(); } catch (e) {}
+    }
+    recorder = null;
+    if (stream) stream.getTracks().forEach((t) => t.stop());
+    stream = null;
+    if (ws && ws.readyState <= 1) ws.close();
+    ws = null;
+    $('preview').style.display = 'none';
+    $('preview').srcObject = null;
+    $('start').classList.remove('hidden');
+    $('stop').classList.add('hidden');
+    $('start').disabled = false;
+    if (message !== undefined) setStatus(message, kind);
+    loadReceivers();
+  }
+
+  async function start() {
+    const receiver = $('receiver').value;
+    if (!receiver) return;
+    const height = parseInt($('quality').value, 10);
+    $('start').disabled = true;
+    stopping = false;
+    setStatus('Choose what to share...');
+    try {
+      stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { height: { ideal: height }, frameRate: { ideal: 30, max: 60 } },
+        audio: $('audio').checked,
+        systemAudio: 'include',
+        selfBrowserSurface: 'exclude',
+        surfaceSwitching: 'include',
+      });
+    } catch (e) {
+      cleanup(e && e.name === 'NotAllowedError' ? 'Sharing was cancelled.' : 'Could not capture the screen: ' + e, 'err');
+      return;
+    }
+
+    const hasAudio = stream.getAudioTracks().length > 0;
+    const mimeType = pickMimeType(hasAudio);
+    const bitrate = height >= 1440 ? 12000000 : height >= 1080 ? 8000000 : 5000000;
+    try {
+      recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: bitrate, audioBitsPerSecond: 128000 });
+    } catch (e) {
+      cleanup('This browser cannot encode the screen: ' + e, 'err');
+      return;
+    }
+
+    $('preview').srcObject = stream;
+    $('preview').style.display = 'block';
+    $('start').classList.add('hidden');
+    $('stop').classList.remove('hidden');
+    stream.getVideoTracks()[0].addEventListener('ended', () => cleanup('Stopped sharing.'));
+
+    setStatus('Connecting to OBS...');
+    ws = new WebSocket('wss://' + location.host + '/ws/cast?receiver=' + encodeURIComponent(receiver));
+    ws.binaryType = 'arraybuffer';
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: 'hello', device: deviceName() }));
+      sendChain = Promise.resolve();
+      recorder.ondataavailable = (e) => {
+        if (!e.data || !e.data.size) return;
+        // Keep chunks in order: each one waits for the previous to be queued.
+        sendChain = sendChain.then(() => e.data.arrayBuffer()).then((buf) => {
+          if (ws && ws.readyState === 1) ws.send(buf);
+        });
+      };
+      recorder.start(100);
+      setStatus('Casting to OBS' + (hasAudio ? ' with sound' : '') + '.', 'ok');
+    };
+    ws.onmessage = (e) => {
+      if (typeof e.data !== 'string') return;
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'replaced') cleanup('Another device started casting to OBS.', 'err');
+        else if (msg.type === 'error') cleanup(msg.message || 'OBS reported an error.', 'err');
+      } catch (err) {}
+    };
+    ws.onerror = () => { if (!stopping) setStatus('Connection to OBS failed.', 'err'); };
+    ws.onclose = () => { if (!stopping) cleanup('OBS closed the connection.', 'err'); };
+  }
+
+  $('start').addEventListener('click', start);
+  $('stop').addEventListener('click', () => cleanup('Stopped sharing.'));
+  loadReceivers();
+  setInterval(() => { if (!recorder) loadReceivers(); }, 5000);
+})();
+</script>
+</body>
+</html>

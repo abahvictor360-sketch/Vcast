@@ -19,6 +19,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include "cast-manager.h"
 #include "net-util.h"
 #include "vcast-output.h"
+#include "receiver/receiver-source.h"
 #include "ui/vcast-dock.h"
 
 #include <obs-frontend-api.h>
@@ -56,6 +57,7 @@ bool obs_module_load(void)
 	}
 
 	vcast_register_output();
+	vcast_register_receiver_source();
 	vcast::CastManager::instance().settings().load();
 
 	auto *main_window = static_cast<QMainWindow *>(obs_frontend_get_main_window());
@@ -72,6 +74,7 @@ void obs_module_unload(void)
 {
 	obs_frontend_remove_event_callback(frontend_event, nullptr);
 	vcast::CastManager::instance().shutdown();
+	vcast_receiver_shutdown();
 	vcast::net_shutdown();
 	obs_log(LOG_INFO, "plugin unloaded");
 }

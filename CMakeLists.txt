@@ -55,6 +55,18 @@ set(
   src/http-server.h
   src/net-util.cpp
   src/net-util.h
+  src/receiver/app-ingest.cpp
+  src/receiver/app-ingest.h
+  src/receiver/container-ingest.cpp
+  src/receiver/container-ingest.h
+  src/receiver/receiver.cpp
+  src/receiver/receiver.h
+  src/receiver/receiver-source.cpp
+  src/receiver/receiver-source.h
+  src/receiver/stream-decoder.cpp
+  src/receiver/stream-decoder.h
+  src/receiver/web-server.cpp
+  src/receiver/web-server.h
   src/ts-muxer.cpp
   src/ts-muxer.h
   src/vcast-output.cpp
@@ -85,7 +97,33 @@ set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_nam
 if(VCAST_BUILD_TESTS)
   add_executable(vcast-e2e-test tests/e2e-headless.cpp ${VCAST_CORE_SOURCES})
   target_include_directories(vcast-e2e-test PRIVATE src)
-  target_link_libraries(vcast-e2e-test PRIVATE OBS::libobs plugin-support)
+  target_link_libraries(
+    vcast-e2e-test
+    PRIVATE
+      OBS::libobs
+      plugin-support
+      mbedtls
+      mbedx509
+      mbedcrypto
+      VcastFFmpeg::avcodec
+      VcastFFmpeg::avformat
+      VcastFFmpeg::avutil
+  )
+  add_executable(vcast-receiver-test tests/receiver-headless.cpp ${VCAST_CORE_SOURCES})
+  target_include_directories(vcast-receiver-test PRIVATE src)
+  target_link_libraries(
+    vcast-receiver-test
+    PRIVATE
+      OBS::libobs
+      plugin-support
+      mbedtls
+      mbedx509
+      mbedcrypto
+      VcastFFmpeg::avcodec
+      VcastFFmpeg::avformat
+      VcastFFmpeg::avutil
+  )
+
   if(WIN32)
     target_compile_definitions(vcast-e2e-test PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
     target_link_libraries(vcast-e2e-test PRIVATE ws2_32 iphlpapi)
