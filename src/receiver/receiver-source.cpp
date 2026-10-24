@@ -645,7 +645,7 @@ obs_properties_t *receiver_properties(void *ptr)
 							      : obs_module_text("Vcast.Receiver.Status.Waiting"),
 							 OBS_TEXT_INFO);
 	obs_property_text_set_info_type(status, OBS_TEXT_INFO_NORMAL);
-	obs_properties_add_button(props, "refresh", obs_module_text("Vcast.Receiver.Refresh"), refresh_status);
+	obs_properties_add_button2(props, "refresh", obs_module_text("Vcast.Receiver.Refresh"), refresh_status, data);
 
 	obs_properties_add_bool(props, "airplay", obs_module_text("Vcast.Receiver.AirPlay"));
 	obs_properties_add_bool(props, "android", obs_module_text("Vcast.Receiver.Android"));
