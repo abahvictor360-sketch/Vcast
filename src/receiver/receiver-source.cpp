@@ -184,6 +184,7 @@ public:
 	}
 
 	void set_slot(int slot) { slot_ = slot; }
+	int slot() const { return slot_; }
 
 	void shutdown()
 	{
@@ -322,7 +323,7 @@ private:
 	bool android_ = false;
 	bool airplay_enabled_ = false;
 	std::atomic<bool> airplay_running_{false};
-	int slot_ = 0;
+	std::atomic<int> slot_{-1};
 	AppIngestServer app_;
 };
 
@@ -336,8 +337,13 @@ int ReceiverHub::add(const std::shared_ptr<ReceiverSource> &receiver)
 	{
 		std::lock_guard<std::mutex> lock(mutex_);
 		first = receivers_.empty();
+		/* Lowest free slot, so a receiver's ports don't collide after others are removed. */
+		slot = 0;
+		while (std::any_of(receivers_.begin(), receivers_.end(),
+				   [&](const std::shared_ptr<ReceiverSource> &r) { return r->slot() == slot; }))
+			slot++;
+		receiver->set_slot(slot);
 		receivers_.push_back(receiver);
-		slot = (int)receivers_.size() - 1;
 	}
 	if (first)
 		start_services();
@@ -581,8 +587,7 @@ void *receiver_create(obs_data_t *settings, obs_source_t *source)
 	auto *data = new SourceData();
 	data->receiver = std::make_shared<ReceiverSource>(source);
 	obs_source_set_async_unbuffered(source, true);
-	int slot = ReceiverHub::get().add(data->receiver);
-	data->receiver->set_slot(slot);
+	ReceiverHub::get().add(data->receiver);
 	data->receiver->apply(settings);
 	return data;
 }

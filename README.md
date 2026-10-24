@@ -1,22 +1,32 @@
-# Vcast — cast OBS to your TV over the local network
+# Vcast — cast screens into OBS, and OBS onto your TV
 
-Vcast is an OBS Studio plugin that sends what OBS is showing to a **smart TV,
-streaming box, or media player on the same Wi‑Fi / network**, the same way
-a phone "casts" or "plays to" a TV.
+Vcast is an OBS Studio plugin for your local Wi‑Fi / network. It works in two
+directions:
 
-- **Find TVs automatically.** Vcast uses UPnP/DLNA (SSDP) discovery, the same
-  protocol phones use for "Play To" and "Cast to TV".
-- **One-click cast.** Pick the TV and press **Cast**. Vcast tells the TV to
-  play the live stream from OBS.
-- **Open the link on any device.** Every stream also has a link
-  (`http://<your-pc>:8090/stream.ts`) that opens in VLC, Kodi, mpv, or most TV
-  and phone media players.
-- **Its own encoder.** You can cast while you also stream or record. It
-  works with x264 or your GPU encoder (NVENC, AMF, QuickSync, Apple VT).
-- **No extra dependencies.** The MPEG‑TS muxer, HTTP server, and DLNA client
-  are built in.
+**Receive: show a phone, tablet or laptop screen in OBS**
 
-## How it works
+Add a **Vcast Screen Receiver** source. Devices then cast to OBS the way they
+cast to a smart TV:
+
+| Device | How it casts |
+| --- | --- |
+| iPhone, iPad, Mac | Built-in **Screen Mirroring** (AirPlay). Pick "Vcast (your PC)" |
+| Android phone / tablet | The free **Vcast** Android app (in `android/`, served by OBS at `https://<pc>:8443/android`) |
+| Windows laptop, Chromebook, Linux, Mac | Open `https://<pc>:8443` in Chrome / Edge / Firefox / Safari and press **Share screen** |
+| Android "Cast/Smart View", Windows Win+K | Miracast. Use Windows' built-in *Wireless Display* receiver plus Window Capture (see [docs/INSTALL.md](docs/INSTALL.md)) |
+
+Video and sound both come through. If a new device starts casting, it
+replaces the current one, like a TV. Add more receiver sources to show
+several devices at once.
+
+**Send: show OBS on a smart TV**
+
+The **Vcast** dock finds DLNA TVs on your network and casts the OBS output to
+them. It can also give you a link that opens in VLC.
+
+➡️ **Installing and using it: [docs/INSTALL.md](docs/INSTALL.md)**
+
+## How sending to a TV works
 
 ```
  OBS canvas ──► H.264 + AAC encoders ──► Vcast output ──► MPEG-TS muxer
@@ -98,7 +108,7 @@ builds Windows, macOS and Ubuntu packages on every push.
 ### Ubuntu / Linux
 
 ```sh
-sudo apt install cmake ninja-build pkg-config libobs-dev qt6-base-dev
+sudo apt install cmake ninja-build pkg-config libobs-dev qt6-base-dev libavcodec-dev libavformat-dev libavutil-dev
 cmake --preset ubuntu-x86_64
 cmake --build build_x86_64
 # Manual install for the current user:
@@ -129,7 +139,8 @@ script checks that the recording decodes without errors.
 sudo apt install obs-studio ffmpeg xvfb
 cmake --preset ubuntu-x86_64 -DVCAST_BUILD_TESTS=ON
 cmake --build build_x86_64
-tests/run-e2e.sh build_x86_64
+tests/run-e2e.sh build_x86_64           # OBS -> fake TV
+tests/run-receiver-e2e.sh build_x86_64  # fake Android app + real Chromium -> OBS (needs node + playwright)
 ```
 
 ## Source layout
@@ -143,7 +154,30 @@ tests/run-e2e.sh build_x86_64
 | `src/dlna.*`, `src/http-client.*` | SSDP discovery and AVTransport control |
 | `src/cast-manager.*` | Encoders, output lifecycle and current TV |
 | `src/ui/*` | Qt dock and settings dialog |
+| `src/receiver/*` | Screen receiver source, decoder, cast page server, Android app ingest |
+| `data/web/index.html` | The laptop cast page |
+| `android/` | Vcast Android sender app |
+
+## How receiving works
+
+```
+iPhone/Mac ──AirPlay (mDNS + RTSP, FairPlay)──┐
+Android app ──UDP discovery + TCP H.264/AAC───┼──► Vcast Screen Receiver ──► FFmpeg decode ──► OBS source
+Laptop browser ──HTTPS page + WebSocket WebM──┘
+```
+
+- **AirPlay** comes from [UxPlay](https://github.com/FDH2/UxPlay) (GPL-3.0),
+  vendored under `third_party/`. Its crypto is ported to mbedTLS and it uses a
+  built-in mDNS responder, so Bonjour is not needed on Windows.
+- The **laptop cast page** has to be served over HTTPS, because browsers only
+  allow screen capture on secure pages. Vcast creates a private certificate on
+  first use, stored in the OBS plugin config folder.
+- The **Android app** protocol is documented in
+  [docs/protocol.md](docs/protocol.md).
+
+Ports used (TCP unless noted): 7000+ (AirPlay), 8443 (cast page), 48690
+(Android app), UDP 48689 (app discovery), UDP 5353 (mDNS), 8090 (TV stream).
 
 ## License
 
-GPL-2.0-or-later, the same as OBS Studio.
+GPL-3.0-or-later. The AirPlay support is based on UxPlay, which is GPL-3.0.
