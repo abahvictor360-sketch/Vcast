@@ -50,7 +50,9 @@ namespace vcast {
 namespace {
 
 constexpr uint16_t kWebPort = 8443;
+#ifdef VCAST_HAVE_AIRPLAY
 constexpr uint16_t kAirPlayPortBase = 7000;
+#endif
 
 std::string random_id()
 {
@@ -126,7 +128,7 @@ private:
 
 class ReceiverSource : public Receiver, public std::enable_shared_from_this<ReceiverSource> {
 public:
-	explicit ReceiverSource(obs_source_t *source) : Receiver(source), source_(source), app_(this) {}
+	explicit ReceiverSource(obs_source_t *source) : Receiver(source), app_(this) {}
 
 	std::string name() const override
 	{
@@ -312,7 +314,6 @@ private:
 	std::string airplay_device_;
 #endif
 
-	obs_source_t *source_;
 	mutable std::mutex config_mutex_;
 	std::string name_;
 	std::string id_;

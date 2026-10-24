@@ -41,7 +41,6 @@ constexpr uint8_t kVideoFrame = 0x11;
 constexpr uint8_t kVideoKeyframe = 0x12;
 constexpr uint8_t kAudioConfig = 0x20;
 constexpr uint8_t kAudioFrame = 0x21;
-constexpr uint8_t kPing = 0x30;
 constexpr uint8_t kBye = 0x31;
 constexpr uint32_t kMaxPayload = 16 * 1024 * 1024;
 constexpr int kIdleTimeoutMs = 10000;
@@ -329,7 +328,7 @@ void AppIngestServer::handle(vcast_socket_t sock, const std::string &peer)
 				decoder.decode_audio(payload.data(), length, pts_us);
 				break;
 			default:
-				break; // PING and unknown frame types (forward compatibility)
+				break; // PING (0x30) and unknown frame types (forward compatibility)
 			}
 		});
 		if (!alive)
