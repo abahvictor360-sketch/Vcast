@@ -37,7 +37,7 @@ button:disabled { opacity: .5; cursor: default; }
 video { width: 100%; border-radius: 10px; margin-top: 14px; background: #000; display: none; }
 ol { padding-left: 20px; margin: 6px 0 0; }
 li { margin: 4px 0; }
-.hidden { display: none; }
+.hidden { display: none !important; }
 a.button { display: block; text-align: center; text-decoration: none; background: var(--accent);
            color: var(--accent-text); border-radius: 12px; padding: 14px; font-weight: 600; margin-top: 10px; }
 code { background: var(--bg); padding: 1px 6px; border-radius: 6px; }
@@ -111,13 +111,14 @@ code { background: var(--bg); padding: 1px 6px; border-radius: 6px; }
     return browser + ' on ' + os;
   }
 
+  const isPhone = /Android|iPhone|iPad|iPod/.test(navigator.userAgent) && !/Windows|CrOS/.test(navigator.userAgent);
   const canShare = window.isSecureContext && navigator.mediaDevices &&
     typeof navigator.mediaDevices.getDisplayMedia === 'function' && typeof MediaRecorder !== 'undefined';
-  const isPhone = /Android|iPhone|iPad|iPod/.test(navigator.userAgent) && !/Windows|CrOS/.test(navigator.userAgent);
 
-  if (!canShare) {
+  // Phone browsers expose the API but can't capture the screen; they use AirPlay / the app instead.
+  if (!canShare || isPhone) {
     $('share-card').classList.add('hidden');
-    $('unsupported').classList.remove('hidden');
+    if (!isPhone) $('unsupported').classList.remove('hidden');
     if (/iPhone|iPad|iPod/.test(navigator.userAgent))
       $('unsupported-text').textContent = 'On iPhone and iPad, use Screen Mirroring as shown below.';
     else if (/Android/.test(navigator.userAgent))
