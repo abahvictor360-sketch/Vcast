@@ -19,11 +19,15 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include "vcast-dock.h"
 #include "settings-dialog.h"
 #include "cast-manager.h"
+#include "receiver/receiver-source.h"
+
+#include <obs-frontend-api.h>
 
 #include <obs-module.h>
 
 #include <QApplication>
 #include <QClipboard>
+#include <QFrame>
 #include <QHBoxLayout>
 #include <QInputDialog>
 #include <QLabel>
@@ -33,6 +37,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <QTimer>
 #include <QVBoxLayout>
 
+#include <cstring>
 #include <memory>
 
 using vcast::CastManager;
@@ -46,6 +51,31 @@ static QString T(const char *key)
 VcastDock::VcastDock(QWidget *parent) : QWidget(parent)
 {
 	auto *layout = new QVBoxLayout(this);
+
+	/* Receive: phones and laptops cast into OBS. */
+	auto *receiveHint = new QLabel(T("Vcast.ReceiveHint"), this);
+	receiveHint->setWordWrap(true);
+	receiveHint->setStyleSheet("font-weight: bold;");
+	layout->addWidget(receiveHint);
+	auto *addReceiverButton = new QPushButton(T("Vcast.AddReceiver"), this);
+	layout->addWidget(addReceiverButton);
+	receiveUrlLabel_ = new QLabel(this);
+	receiveUrlLabel_->setWordWrap(true);
+	receiveUrlLabel_->setTextInteractionFlags(Qt::TextBrowserInteraction);
+	receiveUrlLabel_->setOpenExternalLinks(true);
+	layout->addWidget(receiveUrlLabel_);
+	connect(addReceiverButton, &QPushButton::clicked, this, &VcastDock::addReceiver);
+
+	auto *line = new QFrame(this);
+	line->setFrameShape(QFrame::HLine);
+	line->setFrameShadow(QFrame::Sunken);
+	layout->addWidget(line);
+
+	/* Send: OBS casts to a TV. */
+	auto *sendHint = new QLabel(T("Vcast.SendHint"), this);
+	sendHint->setWordWrap(true);
+	sendHint->setStyleSheet("font-weight: bold;");
+	layout->addWidget(sendHint);
 
 	auto *intro = new QLabel(T("Vcast.Intro"), this);
 	intro->setWordWrap(true);
@@ -337,8 +367,58 @@ void VcastDock::copyUrl()
 		QApplication::clipboard()->setText(urlEdit_->text());
 }
 
+void VcastDock::addReceiver()
+{
+	obs_source_t *scene_source = obs_frontend_get_current_scene();
+	obs_scene_t *scene = scene_source ? obs_scene_from_source(scene_source) : nullptr;
+	if (!scene) {
+		obs_source_release(scene_source);
+		return;
+	}
+
+	/* Reuse an existing receiver if there is one, so the AirPlay name stays the same. */
+	obs_source_t *source = nullptr;
+	obs_enum_sources(
+		[](void *param, obs_source_t *candidate) {
+			if (strcmp(obs_source_get_id(candidate), VCAST_RECEIVER_SOURCE_ID) != 0)
+				return true;
+			*static_cast<obs_source_t **>(param) = obs_source_get_ref(candidate);
+			return false;
+		},
+		&source);
+	if (!source) {
+		std::string name = T("Vcast.Receiver.Name").toStdString();
+		source = obs_source_create(VCAST_RECEIVER_SOURCE_ID, name.c_str(), nullptr, nullptr);
+	}
+	if (source && !obs_scene_find_source(scene, obs_source_get_name(source))) {
+		obs_sceneitem_t *item = obs_scene_add(scene, source);
+		if (item) {
+			/* Fit the phone/laptop picture inside the canvas. */
+			obs_video_info ovi;
+			if (obs_get_video_info(&ovi)) {
+				vec2 bounds;
+				vec2_set(&bounds, (float)ovi.base_width, (float)ovi.base_height);
+				obs_sceneitem_set_bounds_type(item, OBS_BOUNDS_SCALE_INNER);
+				obs_sceneitem_set_bounds_alignment(item, OBS_ALIGN_CENTER);
+				obs_sceneitem_set_bounds(item, &bounds);
+			}
+		}
+	}
+	obs_source_release(source);
+	obs_source_release(scene_source);
+	refreshState();
+}
+
 void VcastDock::refreshState()
 {
+	std::string web = vcast_receiver_web_url();
+	QString receiveText = web.empty() ? QString()
+					  : QString(T("Vcast.ReceiveUrl"))
+						    .arg(QString::fromStdString(web),
+							 QString::fromStdString(vcast_receiver_default_name()));
+	if (receiveUrlLabel_->text() != receiveText)
+		receiveUrlLabel_->setText(receiveText);
+
 	auto &manager = CastManager::instance();
 	bool sharing = manager.sharing();
 	bool busy = busy_;

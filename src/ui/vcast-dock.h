@@ -49,6 +49,7 @@ private slots:
 	void addByAddress();
 	void openSettings();
 	void copyUrl();
+	void addReceiver();
 	void refreshState();
 
 private:
@@ -67,6 +68,7 @@ private:
 	QPushButton *linkButton_;
 	QPushButton *settingsButton_;
 	QPushButton *copyButton_;
+	QLabel *receiveUrlLabel_;
 	QLineEdit *urlEdit_;
 	QLabel *statusLabel_;
 	QLabel *clientsLabel_;
