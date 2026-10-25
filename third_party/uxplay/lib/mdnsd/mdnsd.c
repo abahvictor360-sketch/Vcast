@@ -10,6 +10,8 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  Lesser General Public License for more details.
+ *
+ *  modified for Vcast 2026: repeated announcements, no in6addr_any (MSVC)
  */
 
 #include <ctype.h>
@@ -17,7 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifndef WIN32
+#ifndef _WIN32
 #include <ifaddrs.h>
 #include <net/if.h>
 #endif
@@ -67,6 +69,11 @@ struct mdnsd_s {
     int running;
     thread_handle_t thread;
     mutex_handle_t mutex;
+
+    /* Vcast: repeat announcements (RFC 6762 section 8.3) */
+    int announce_repeats;
+    uint64_t next_announce_ns;
+    uint32_t announce_ttl;
 };
 
 static int mdns_put_u8(mdns_packet_t *packet, unsigned int value)
@@ -420,7 +427,7 @@ static uint32_t mdns_get_default_ipv4(void)
 
 static int mdns_get_default_ipv6(unsigned char addr[16], unsigned int *scope_id)
 {
-#ifdef WIN32
+#ifdef _WIN32
     (void) addr;
     (void) scope_id;
     return 0;
@@ -480,8 +487,14 @@ static int mdns_open_socket4(uint32_t iface_addr)
 {
     int fd;
     int one = 1;
+#ifdef _WIN32
+    /* Vcast: Winsock takes these IPv4 multicast options as DWORDs */
+    DWORD ttl = 255;
+    DWORD loop = 1;
+#else
     unsigned char ttl = 255;
     unsigned char loop = 1;
+#endif
     struct sockaddr_in addr;
     struct ip_mreq mreq;
 
@@ -561,10 +574,9 @@ static int mdns_open_socket6(unsigned int scope_id)
     setsockopt(fd, IPPROTO_IPV6, IPV6_MULTICAST_LOOP, (const char *) &loop, sizeof(loop));
     setsockopt(fd, IPPROTO_IPV6, IPV6_MULTICAST_IF, (const char *) &scope_id, sizeof(scope_id));
 
-    memset(&addr, 0, sizeof(addr));
+    memset(&addr, 0, sizeof(addr));   /* sin6_addr = in6addr_any */
     addr.sin6_family = AF_INET6;
     addr.sin6_port = htons(MDNS_PORT);
-    addr.sin6_addr = in6addr_any;
 
     if (bind(fd, (struct sockaddr *) &addr, sizeof(addr)) == -1) {
         int error = SOCKET_GET_ERROR();
@@ -951,6 +963,14 @@ static THREAD_RETVAL mdns_thread(void *arg)
         tv.tv_usec = 250000;
 
         ret = select(max_fd + 1, &rfds, NULL, NULL, &tv);
+
+        MUTEX_LOCK(mdnsd->mutex);
+        if (mdnsd->announce_repeats > 0 && vcast_realtime_ns() >= mdnsd->next_announce_ns) {
+            mdnsd->announce_repeats--;
+            mdnsd->next_announce_ns = vcast_realtime_ns() + 2000000000ULL;
+            mdns_announce_locked(mdnsd, mdnsd->announce_ttl);
+        }
+        MUTEX_UNLOCK(mdnsd->mutex);
         if (ret > 0 && fd4 != -1 && FD_ISSET(fd4, &rfds)) {
             unsigned char buffer[MDNS_MAX_PACKET];
             struct sockaddr_in from;
@@ -1137,6 +1157,10 @@ void mdnsd_announce(mdnsd_t *mdnsd, uint32_t ttl)
 
     MUTEX_LOCK(mdnsd->mutex);
     mdns_announce_locked(mdnsd, ttl);
+    /* announce twice more, 1 s and 3 s from now */
+    mdnsd->announce_repeats = 2;
+    mdnsd->announce_ttl = ttl;
+    mdnsd->next_announce_ns = vcast_realtime_ns() + 1000000000ULL;
     MUTEX_UNLOCK(mdnsd->mutex);
 }
 

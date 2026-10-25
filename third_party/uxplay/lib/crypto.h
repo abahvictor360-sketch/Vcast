@@ -18,11 +18,13 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  *
  *  modified by fduncanh 2023
+ *  modified for Vcast 2026: implemented with mbedTLS 3.6 and orlp/ed25519
+ *  instead of OpenSSL; a few helpers added for tests.
  */
 
 /*
  * Helper methods for various crypto operations.
- * Uses OpenSSL behind the scenes.
+ * Uses mbedTLS (AES, GCM, SHA, MD5, X25519, RNG) and orlp/ed25519 behind the scenes.
 */
 
 #ifndef CRYPTO_H
@@ -66,10 +68,16 @@ x25519_key_t *x25519_key_generate(void);
 x25519_key_t *x25519_key_from_raw(const unsigned char data[X25519_KEY_SIZE]);
 void x25519_key_get_raw(unsigned char data[X25519_KEY_SIZE], const x25519_key_t *key);
 void x25519_key_destroy(x25519_key_t *key);
+/* returns 1 on success (like OpenSSL's RAND_bytes) */
 int get_random_bytes(unsigned char *buf, int num);
+/* (Vcast) mbedTLS-style RNG callback (thread-safe CTR-DRBG); returns 0 on success */
+int crypto_random(void *unused, unsigned char *buf, size_t len);
 void pk_to_base64(const unsigned char *pk, int pk_len, char *pk_base64, int len);
   
-void x25519_derive_secret(unsigned char secret[X25519_KEY_SIZE], const x25519_key_t *ours, const x25519_key_t *theirs);
+/* returns 0 on success; on failure secret is zeroed */
+int x25519_derive_secret(unsigned char secret[X25519_KEY_SIZE], const x25519_key_t *ours, const x25519_key_t *theirs);
+/* (Vcast) key pair from a raw 32-byte private scalar, as in RFC 7748 */
+x25519_key_t *x25519_key_from_private_raw(const unsigned char data[X25519_KEY_SIZE]);
 
 // GCM AES 128
 
@@ -85,11 +93,10 @@ typedef struct ed25519_key_s ed25519_key_t;
 
 ed25519_key_t *ed25519_key_generate(const char *device_id, const char * keyfile, int * result);
 ed25519_key_t *ed25519_key_from_raw(const unsigned char data[ED25519_KEY_SIZE]);
+/* (Vcast) key pair from a raw 32-byte private key (seed), as in RFC 8032 */
+ed25519_key_t *ed25519_key_from_seed(const unsigned char seed[ED25519_KEY_SIZE]);
 void ed25519_key_get_raw(unsigned char data[ED25519_KEY_SIZE], const ed25519_key_t *key);
-/*
- * Note that this function does *not copy* the OpenSSL key but only the wrapper. The internal OpenSSL key is still the
- * same. Only the reference count is increased so destroying both the original and the copy is allowed.
- */
+/* returns an independent copy; destroying both the original and the copy is allowed */
 ed25519_key_t *ed25519_key_copy(const ed25519_key_t *key);
 void ed25519_key_destroy(ed25519_key_t *key);
 
@@ -103,7 +110,7 @@ int ed25519_verify(const unsigned char *signature, size_t signature_len,
 // SHA512
 
 typedef struct sha_ctx_s sha_ctx_t;
-sha_ctx_t *sha_init();
+sha_ctx_t *sha_init(void);
 void sha_update(sha_ctx_t *ctx, const uint8_t *in, int len);
 void sha_final(sha_ctx_t *ctx, uint8_t *out, unsigned int *len);
 void sha_reset(sha_ctx_t *ctx);
@@ -111,7 +118,7 @@ void sha_destroy(sha_ctx_t *ctx);
 
 //MD5
 typedef struct md5_ctx_s md5_ctx_t;
-md5_ctx_t *md5_init();
+md5_ctx_t *md5_init(void);
 void md5_update(md5_ctx_t *ctx, const uint8_t *in, int len);
 void md5_final(md5_ctx_t *ctx, uint8_t *out, unsigned int *len);
 void md5_reset(md5_ctx_t *ctx);

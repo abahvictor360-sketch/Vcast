@@ -39,6 +39,7 @@
  * Author:        tom.cocagne@gmail.com (Tom Cocagne)
  * 
  * Dependencies:  OpenSSL (and Advapi32.lib on Windows)
+ *                 (Vcast 2026: ported to mbedTLS 3.6, see srp.c)
  * 
  * Usage:         Refer to test_srp.c for a demonstration
  * 

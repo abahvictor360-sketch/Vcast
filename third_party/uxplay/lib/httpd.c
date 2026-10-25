@@ -196,11 +196,22 @@ httpd_init(logger_t *logger, httpd_callbacks_t *callbacks, int nohold)
     return httpd;
 }
 
+static void
+httpd_remove_connection(httpd_t *httpd, http_connection_t *connection, int sock_err);
+
 void
 httpd_destroy(httpd_t *httpd)
 {
     if (httpd) {
         httpd_stop(httpd);
+        /* Vcast: close the remaining client connections too (their
+         * conn_destroy callbacks stop the RTP/NTP/mirror threads), instead
+         * of leaving them running on freed memory. */
+        for (int i = 0; i < httpd->max_connections; i++) {
+            if (httpd->connections[i].connected) {
+                httpd_remove_connection(httpd, &httpd->connections[i], 0);
+            }
+        }
         free(httpd->connections);
         free(httpd);
     }
@@ -731,7 +742,9 @@ httpd_stop(httpd_t *httpd)
     assert(httpd);
 
     MUTEX_LOCK(httpd->run_mutex);
-    if (!httpd->running || httpd->joined) {
+    /* Vcast: also join a thread that already exited on its own (running == 0
+     * but not joined), so its sockets are closed and it can be restarted */
+    if (httpd->joined) {
         MUTEX_UNLOCK(httpd->run_mutex);
         return;
     }

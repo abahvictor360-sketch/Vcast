@@ -13,6 +13,7 @@
  *  Lesser General Public License for more details.
  *==================================================================
  * modified by fduncanh 2021, 2023
+ * modified for Vcast 2026: no OpenSSL; free the SRP salt/verifier buffers.
  */
 
 #include <stdlib.h>
@@ -20,7 +21,7 @@
 #include <string.h>
 #include <assert.h>
 #include <stdbool.h>
-#include <openssl/sha.h> // for SHA512_DIGEST_LENGTH
+#define SHA512_DIGEST_LENGTH 64   /* (Vcast: was <openssl/sha.h>) */
 
 #include "pairing.h"
 #include "crypto.h"
@@ -531,11 +532,15 @@ srp_new_user(pairing_session_t *session, pairing_t *pairing, const char *device_
                                        (const unsigned char **) &srp_v, &len_v,
                                        NULL, NULL);
     if (len_s != SRP_SALT_SIZE || len_v != SRP_VERIFIER_SIZE) {
+        free(srp_s);
+        free(srp_v);
         return -3;
     }
 
     memcpy(session->srp->salt, srp_s, SRP_SALT_SIZE);
     memcpy(session->srp->verifier, srp_v, SRP_VERIFIER_SIZE);
+    free(srp_s);
+    free(srp_v);
 
     *salt = (char *) session->srp->salt;
     *len_salt = len_s;

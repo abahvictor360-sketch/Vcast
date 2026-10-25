@@ -32,7 +32,7 @@
 int
 netutils_init()
 {
-#ifdef WIN32
+#ifdef _WIN32
     WORD wVersionRequested;
 	WSADATA wsaData;
 	int ret;
@@ -55,7 +55,7 @@ netutils_init()
 void
 netutils_cleanup()
 {
-#ifdef WIN32
+#ifdef _WIN32
     WSACleanup();
 #endif
 }
@@ -132,10 +132,26 @@ netutils_init_socket(unsigned short *port, int use_ipv6, int use_udp)
         goto cleanup;
     }
 
-    int ret = setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &reuseaddr, sizeof (reuseaddr));
-    if (ret == -1) {
-        goto cleanup;
+    int ret = 0;
+#ifdef _WIN32
+    /* Vcast: on Windows SO_REUSEADDR lets a second socket silently take over a
+     * port that is in use; claim the port exclusively instead, so a busy port
+     * is reported as an error. */
+    (void) reuseaddr;
+    {
+        BOOL exclusive = TRUE;
+        setsockopt(server_fd, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (const char *) &exclusive, sizeof(exclusive));
     }
+#else
+    /* Vcast: only TCP listeners need SO_REUSEADDR (TIME_WAIT); on UDP it would
+     * let two receivers share a port. */
+    if (!use_udp) {
+        ret = setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &reuseaddr, sizeof (reuseaddr));
+        if (ret == -1) {
+            goto cleanup;
+        }
+    }
+#endif
 
 #if defined(__APPLE__) && defined(UXPLAY_HAVE_APPLE_P2P)
     if (peer_to_peer) {
@@ -154,7 +170,7 @@ netutils_init_socket(unsigned short *port, int use_ipv6, int use_udp)
 
         /* Initialize sockaddr for bind */
         sin6ptr->sin6_family = family;
-        sin6ptr->sin6_addr = in6addr_any;
+        /* (sin6_addr is already in6addr_any: saddr was zeroed) */
         sin6ptr->sin6_port = htons(*port);
 
 #ifndef _WIN32

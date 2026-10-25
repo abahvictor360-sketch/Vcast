@@ -149,7 +149,7 @@ kernel_timestamp_session_t* kernel_timestamp_session_create(raop_ntp_t *raop_ntp
     GetSystemTimeAsFileTime(&ft);
     uint64_t windows_ticks = ((uint64_t)ft.dwHighDateTime << 32) | ft.dwLowDateTime;
     session->base_system_time_us = (windows_ticks - 116444736000000000ULL) / 10ULL;
-#if defined(SIO_TIMESTAMPING)  //UCRT64 only, not available on MINGW64
+#if defined(SIO_TIMESTAMPING) && defined(VCAST_WIN_KERNEL_TIMESTAMPS)  //UCRT64 only, not available on MINGW64
     {
 
         /* The NetAdapter must  be enabled for Software "RxAll" Timestamping   */      
@@ -209,7 +209,7 @@ ssize_t kernel_timestamp_session_recv(kernel_timestamp_session_t *session, char 
         *recv_time_kernel = 0;
         *recv_time_clock = 0;
 #ifdef _WIN32
-#if defined(SIO_TIMESTAMPING) //not defined in legacy MSVCRT systems such as MSYS2 MINGW64
+#if defined(SIO_TIMESTAMPING) && defined(VCAST_WIN_KERNEL_TIMESTAMPS) //not defined in legacy MSVCRT systems such as MSYS2 MINGW64
         if (session->pWSARecvMsg_ptr) {
             LPFN_WSARECVMSG pWSARecvMsg = (LPFN_WSARECVMSG) session->pWSARecvMsg_ptr;
             if (pWSARecvMsg != NULL) {
@@ -836,19 +836,17 @@ raop_ntp_thread(void *arg) {
             }
         }
 
-        struct timespec wait_time;
         MUTEX_LOCK(raop_ntp->wait_mutex);
-        clock_gettime(CLOCK_REALTIME, &wait_time);
-        if (ntpcount > (int) NTP_BURST_LIMIT) {
-            wait_time.tv_sec += 3;               // Sleep for 3 seconds
-        } else {
-            wait_time.tv_nsec += 250000000;   // Sleep for 0.25 seconds during initial NTP burst
-            if (wait_time.tv_nsec >= 1000000000LL) {
-                wait_time.tv_sec +=1;
-                wait_time.tv_nsec -= 1000000000LL;
-            }
+        /* Vcast: the stop request may have been signalled before we took the
+         * wait mutex; don't sleep through it. */
+        MUTEX_LOCK(raop_ntp->run_mutex);
+        int still_running = raop_ntp->running;
+        MUTEX_UNLOCK(raop_ntp->run_mutex);
+        if (still_running) {
+            /* Sleep for 3 seconds, or 0.25 seconds during the initial NTP burst */
+            COND_TIMEDWAIT_MS(raop_ntp->wait_cond, raop_ntp->wait_mutex,
+                              (ntpcount > (int) NTP_BURST_LIMIT) ? 3000 : 250);
         }
-        pthread_cond_timedwait(&raop_ntp->wait_cond, &raop_ntp->wait_mutex, &wait_time);
         MUTEX_UNLOCK(raop_ntp->wait_mutex);
         ntpcount = ntpcount > NTP_BURST_LIMIT ? NTP_BURST_LIMIT : ntpcount;
     }
@@ -907,7 +905,9 @@ raop_ntp_stop(raop_ntp_t *raop_ntp)
     /* Check that we are running and thread is not
      * joined (should never be while still running) */
     MUTEX_LOCK(raop_ntp->run_mutex);
-    if (!raop_ntp->running || raop_ntp->joined) {
+    /* Vcast: also join a thread that already exited on its own (running == 0
+     * but not joined), so its sockets are closed and it can be restarted */
+    if (raop_ntp->joined) {
         MUTEX_UNLOCK(raop_ntp->run_mutex);
         return;
     }
@@ -971,9 +971,7 @@ uint64_t raop_ntp_timestamp_to_nano_seconds(raop_ntp_t *raop_ntp, uint64_t times
  * The system Unix time is used as the local wall clock.
  */
 uint64_t raop_ntp_get_local_time() {
-    struct timespec time;
-    clock_gettime(CLOCK_REALTIME, &time);
-    return ((uint64_t) time.tv_nsec) + (uint64_t) time.tv_sec * SECOND_IN_NSECS;
+    return vcast_realtime_ns();
 }
 
 /**

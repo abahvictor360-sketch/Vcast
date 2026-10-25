@@ -342,6 +342,7 @@ raop_handler_pairsetup_pin(raop_conn_t *conn,
         plist_t res_root_node = plist_new_dict();
         plist_t res_salt_node = plist_new_data(salt, len_salt);
         plist_t res_pk_node = plist_new_data(pk, len_pk);
+        free((void *) pk);   /* (Vcast: allocated by srp_create_server_ephemeral_key) */
         plist_dict_set_item(res_root_node, "pk", res_pk_node);	
         plist_dict_set_item(res_root_node, "salt", res_salt_node);
         plist_to_bin(res_root_node, response_data, (uint32_t*) response_datalen);

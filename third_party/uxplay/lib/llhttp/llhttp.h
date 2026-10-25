@@ -551,12 +551,15 @@ extern "C" {
 #endif
 #include <stddef.h>
 
+/* (Vcast: built as part of a static library; let the build override this) */
+#ifndef LLHTTP_EXPORT
 #if defined(__wasm__)
 #define LLHTTP_EXPORT __attribute__((visibility("default")))
 #elif defined(_WIN32)
 #define LLHTTP_EXPORT __declspec(dllexport)
 #else
 #define LLHTTP_EXPORT
+#endif
 #endif
 
 typedef llhttp__internal_t llhttp_t;

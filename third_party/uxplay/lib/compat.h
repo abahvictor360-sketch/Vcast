@@ -10,12 +10,15 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  Lesser General Public License for more details.
+ *
+ * modified for Vcast 2026: no _snprintf override (MSVC has a conforming
+ * snprintf), MSVC replacements for ssize_t/strcasecmp.
  */
 
 #ifndef COMPAT_H
 #define COMPAT_H
 
-#if defined(WIN32)
+#if defined(_WIN32)
 #ifndef WIN32_LEAN_AND_MEAN
  #define WIN32_LEAN_AND_MEAN
 #endif
@@ -25,9 +28,7 @@
 #include <iphlpapi.h>
 #include <mswsock.h>
 #include <windows.h>
-#ifndef snprintf
-#define snprintf _snprintf
-#endif
+#include "win_types.h"
 #else
 #include <sys/types.h>
 #include <sys/socket.h>

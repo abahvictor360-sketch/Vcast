@@ -20,6 +20,12 @@
 #include <assert.h>
 #include <stdio.h>
 
+#ifdef _WIN32
+#include "win_types.h"   /* strncasecmp for MSVC */
+#else
+#include <strings.h>
+#endif
+
 #include "http_request.h"
 #include "llhttp/llhttp.h"
 

@@ -22,6 +22,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <sys/types.h>
+#ifdef _WIN32
+#include "win_types.h"   /* ssize_t for MSVC */
+#endif
 #include "logger.h"
 
 typedef uint64_t q32_32_t;

@@ -842,7 +842,9 @@ raop_rtp_stop(raop_rtp_t *raop_rtp)
     /* Check that we are running and thread is not
      * joined (should never be while still running) */
     MUTEX_LOCK(raop_rtp->run_mutex);
-    if (!raop_rtp->running || raop_rtp->joined) {
+    /* Vcast: also join a thread that already exited on its own (running == 0
+     * but not joined), so its sockets are closed and it can be restarted */
+    if (raop_rtp->joined) {
         MUTEX_UNLOCK(raop_rtp->run_mutex);
         return;
     }

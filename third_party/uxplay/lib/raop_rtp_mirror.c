@@ -38,10 +38,19 @@
 #define CAST (char *)
 /* are these keepalive settings for WIN32 correct? */
 /* (taken from https://github.com/wegank/ludimus)  */
+/* (Vcast: the Windows 10 SDK defines these in ws2ipdef.h already) */
+#ifndef TCP_KEEPALIVE
 #define TCP_KEEPALIVE 3
+#endif
+#ifndef TCP_KEEPCNT
 #define TCP_KEEPCNT 16
+#endif
+#ifndef TCP_KEEPIDLE
 #define TCP_KEEPIDLE TCP_KEEPALIVE
+#endif
+#ifndef TCP_KEEPINTVL
 #define TCP_KEEPINTVL 17
+#endif
 #else
 #define CAST
 #endif
@@ -251,9 +260,14 @@ raop_rtp_mirror_thread(void *arg)
             }
 
             // We're calling recv for a certain amount of data, so we need a timeout
+#ifdef _WIN32
+            /* Windows takes SO_RCVTIMEO as a DWORD in milliseconds */
+            DWORD tv = 5;
+#else
             struct timeval tv;
             tv.tv_sec = 0;
             tv.tv_usec = 5000;
+#endif
             if (setsockopt(stream_fd, SOL_SOCKET, SO_RCVTIMEO, CAST &tv, sizeof(tv)) < 0) {
                 int sock_err = SOCKET_GET_ERROR();
                 logger_log(raop_rtp_mirror->logger, LOGGER_ERR,
@@ -860,8 +874,14 @@ raop_rtp_mirror_thread(void *arg)
     }
 
     if (unsupported_codec) {
-        CLOSESOCKET(raop_rtp_mirror->mirror_data_sock);
-        raop_rtp_mirror_stop(raop_rtp_mirror);
+        /* Vcast: never call raop_rtp_mirror_stop() from this thread (it joins
+         * this thread); the owner's stop/destroy joins it later. */
+        MUTEX_LOCK(raop_rtp_mirror->run_mutex);
+        if (raop_rtp_mirror->mirror_data_sock != -1) {
+            CLOSESOCKET(raop_rtp_mirror->mirror_data_sock);
+            raop_rtp_mirror->mirror_data_sock = -1;
+        }
+        MUTEX_UNLOCK(raop_rtp_mirror->run_mutex);
         raop_rtp_mirror->callbacks.video_reset(raop_rtp_mirror->callbacks.cls, RESET_TYPE_RTP_SHUTDOWN);
     }
 
@@ -945,7 +965,9 @@ void raop_rtp_mirror_stop(raop_rtp_mirror_t *raop_rtp_mirror) {
     /* Check that we are running and thread is not
      * joined (should never be while still running) */
     MUTEX_LOCK(raop_rtp_mirror->run_mutex);
-    if (!raop_rtp_mirror->running || raop_rtp_mirror->joined) {
+    /* Vcast: also join a thread that already exited on its own (running == 0
+     * but not joined), so its sockets are closed and it can be restarted */
+    if (raop_rtp_mirror->joined) {
         MUTEX_UNLOCK(raop_rtp_mirror->run_mutex);
         return;
     }

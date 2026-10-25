@@ -13,6 +13,9 @@
  *
  *=================================================================
  * modified by fduncanh 2022, 2026
+ * modified for Vcast 2026: used on macOS only (system dns_sd in libSystem);
+ * a private thread services the registrations' sockets with
+ * DNSServiceProcessResult(), as the dns_sd API requires.
  */
 
 #include <stdlib.h>
@@ -108,7 +111,7 @@ typedef const void * (DNSSD_STDCALL *TXTRecordGetBytesPtr_t)(const TXTRecordRef 
 
 
 typedef struct dnssd_private_s {
-#ifdef WIN32
+#ifdef _WIN32
     HMODULE module;
 #elif USE_LIBDL
     void *module;
@@ -130,7 +133,84 @@ typedef struct dnssd_private_s {
     DNSServiceRef raop_service;
     DNSServiceRef airplay_service;
 
+    /* Vcast: service thread (see dnssd_service_thread) */
+    thread_handle_t thread;
+    int thread_running;
+    int thread_stop;
+    mutex_handle_t thread_mutex;
 } dnssd_private_t;
+
+/* Vcast: process replies from the mDNS daemon for the registered services.
+ * The set of service refs is fixed while the thread runs: (un)registration
+ * stops the thread first and restarts it afterwards. */
+static THREAD_RETVAL dnssd_service_thread(void *arg)
+{
+    dnssd_private_t *dnssd = (dnssd_private_t *) arg;
+    DNSServiceRef refs[2] = { dnssd->raop_service, dnssd->airplay_service };
+
+    for (;;) {
+        fd_set rfds;
+        struct timeval tv;
+        int max_fd = -1;
+        int stop;
+
+        MUTEX_LOCK(dnssd->thread_mutex);
+        stop = dnssd->thread_stop;
+        MUTEX_UNLOCK(dnssd->thread_mutex);
+        if (stop) {
+            break;
+        }
+
+        FD_ZERO(&rfds);
+        for (int i = 0; i < 2; i++) {
+            int fd = refs[i] ? dnssd->DNSServiceRefSockFD(refs[i]) : -1;
+            if (fd >= 0) {
+                FD_SET(fd, &rfds);
+                if (fd > max_fd) max_fd = fd;
+            }
+        }
+        if (max_fd < 0) {
+            break;
+        }
+        tv.tv_sec = 0;
+        tv.tv_usec = 250000;
+        if (select(max_fd + 1, &rfds, NULL, NULL, &tv) <= 0) {
+            continue;
+        }
+        for (int i = 0; i < 2; i++) {
+            int fd = refs[i] ? dnssd->DNSServiceRefSockFD(refs[i]) : -1;
+            if (fd >= 0 && FD_ISSET(fd, &rfds)) {
+                if (dnssd->DNSServiceProcessResult(refs[i]) != kDNSServiceErr_NoError) {
+                    refs[i] = NULL;   /* connection to the daemon failed: stop polling it */
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+static void dnssd_service_thread_stop(dnssd_private_t *dnssd)
+{
+    if (!dnssd->thread_running) {
+        return;
+    }
+    MUTEX_LOCK(dnssd->thread_mutex);
+    dnssd->thread_stop = 1;
+    MUTEX_UNLOCK(dnssd->thread_mutex);
+    THREAD_JOIN(dnssd->thread);
+    dnssd->thread_running = 0;
+}
+
+static void dnssd_service_thread_start(dnssd_private_t *dnssd)
+{
+    dnssd_service_thread_stop(dnssd);
+    if (!dnssd->raop_service && !dnssd->airplay_service) {
+        return;
+    }
+    dnssd->thread_stop = 0;
+    THREAD_CREATE(dnssd->thread, dnssd_service_thread, dnssd);
+    dnssd->thread_running = dnssd->thread ? 1 : 0;
+}
 
 /* --- Dummy Callback to prevent Avahi/DBus from leaking OutgoingBytes --- */
 static void DNSSD_STDCALL 
@@ -151,7 +231,7 @@ dnssd_private_init(dnssd_t *dnssd_public, int *error)
         return NULL;
     }
 
-#ifdef WIN32
+#ifdef _WIN32
     dnssd->module = LoadLibraryA("dnssd.dll");
     if (!dnssd->module) {
         if (error) *error = DNSSD_ERROR_LIBNOTFOUND;
@@ -213,6 +293,7 @@ dnssd_private_init(dnssd_t *dnssd_public, int *error)
     dnssd->TXTRecordDeallocate = &TXTRecordDeallocate;
 #endif
 
+    MUTEX_CREATE(dnssd->thread_mutex);
     return (void *) dnssd;
 }
 
@@ -221,7 +302,9 @@ dnssd_private_destroy(void *private)
 {
     if (private) {
         dnssd_private_t *dnssd = (dnssd_private_t *) private;
-#ifdef WIN32
+        dnssd_service_thread_stop(dnssd);
+        MUTEX_DESTROY(dnssd->thread_mutex);
+#ifdef _WIN32
         FreeLibrary(dnssd->module);
 #elif USE_LIBDL
         dlclose(dnssd->module);
@@ -307,6 +390,7 @@ dnssd_register_raop(dnssd_t *dnssd_public, unsigned short port)
     strncat(servname, dnssd_public->name, sizeof(servname)-strlen(servname)-1);
 
     /* Register the service */
+    dnssd_service_thread_stop(dnssd);
     DNSServiceErrorType retval = dnssd->DNSServiceRegister(&dnssd->raop_service, flags, interface_index,
                                                           servname, "_raop._tcp",
                                                           NULL, NULL,
@@ -315,6 +399,10 @@ dnssd_register_raop(dnssd_t *dnssd_public, unsigned short port)
                                                           dnssd->TXTRecordGetBytesPtr(&dnssd->raop_record),
                                                           dnssd_register_dummy_callback,
                                                           NULL);
+    if (retval != kDNSServiceErr_NoError) {
+        dnssd->raop_service = NULL;
+    }
+    dnssd_service_thread_start(dnssd);
 
     return (int) retval;   /* error codes are listed in Apple's dns_sd.h */
 }
@@ -375,6 +463,7 @@ dnssd_register_airplay(dnssd_t *dnssd_public, unsigned short port)
     dnssd->TXTRecordSetValue(&dnssd->airplay_record, "vv", strlen(AIRPLAY_VV), AIRPLAY_VV);
 
     /* Register the service */
+    dnssd_service_thread_stop(dnssd);
     DNSServiceErrorType retval = dnssd->DNSServiceRegister(&dnssd->airplay_service, flags, interface_index,
                                                            dnssd_public->name, "_airplay._tcp",
                                                            NULL, NULL,
@@ -383,6 +472,10 @@ dnssd_register_airplay(dnssd_t *dnssd_public, unsigned short port)
                                                            dnssd->TXTRecordGetBytesPtr(&dnssd->airplay_record),
                                                            dnssd_register_dummy_callback,
                                                            NULL);
+    if (retval != kDNSServiceErr_NoError) {
+        dnssd->airplay_service = NULL;
+    }
+    dnssd_service_thread_start(dnssd);
 
     return (int) retval;   /* error codes are listed in Apple's dns_sd.h */
 }
@@ -422,11 +515,15 @@ dnssd_unregister_raop(dnssd_t *dnssd_public)
         return;
     }
 
+    dnssd_service_thread_stop(dnssd);
+
     /* Deallocate TXT record */
     dnssd->TXTRecordDeallocate(&dnssd->raop_record);
 
     dnssd->DNSServiceRefDeallocate(dnssd->raop_service);
     dnssd->raop_service = NULL;
+
+    dnssd_service_thread_start(dnssd);
 }
 
 void
@@ -440,11 +537,15 @@ dnssd_unregister_airplay(dnssd_t *dnssd_public)
         return;
     }
 
+    dnssd_service_thread_stop(dnssd);
+
     /* Deallocate TXT record */
     dnssd->TXTRecordDeallocate(&dnssd->airplay_record);
 
     dnssd->DNSServiceRefDeallocate(dnssd->airplay_service);
     dnssd->airplay_service = NULL;
+
+    dnssd_service_thread_start(dnssd);
 }
 
 static DNSServiceRef
@@ -465,10 +566,9 @@ dnssd_get_service_fd(dnssd_t *dnssd_public, int service)
     dnssd_private_t *dnssd = (dnssd_private_t *) dnssd_public->dnssd_private;
     DNSServiceRef ref = dnssd_service_ref(dnssd, service);
 
-    if (!ref || !dnssd->DNSServiceRefSockFD || !dnssd->DNSServiceProcessResult) {
-        return -1;
-    }
-    return dnssd->DNSServiceRefSockFD(ref);
+    /* Vcast: serviced by the internal thread */
+    (void) ref;
+    return -1;
 }
 
 int
@@ -479,10 +579,9 @@ dnssd_process_service(dnssd_t *dnssd_public, int service)
     dnssd_private_t *dnssd = (dnssd_private_t *) dnssd_public->dnssd_private;
     DNSServiceRef ref = dnssd_service_ref(dnssd, service);
 
-    if (!ref || !dnssd->DNSServiceProcessResult) {
-        return -1;
-    }
-    return (int) dnssd->DNSServiceProcessResult(ref);
+    /* Vcast: serviced by the internal thread */
+    (void) ref;
+    return -1;
 }
 
 void dnssd_error_text(int *dnssd_error, const char *appname) {

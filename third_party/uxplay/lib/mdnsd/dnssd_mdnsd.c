@@ -14,6 +14,7 @@
  *=================================================================
  * modified by fduncanh 2022, 2026
  * includes added code authored by kgbook, 2026
+ * modified for Vcast 2026: own host name per receiver (see dnssd_make_host_name)
  */
 
 #include <assert.h>
@@ -59,16 +60,25 @@ static void dnssd_sanitize_label(char *label)
     }
 }
 
-static void dnssd_make_host_name(char *dst, size_t dst_len)
+static void dnssd_make_host_name(char *dst, size_t dst_len, const char *hw_addr, int hw_addr_len)
 {
     char host[128];
+    char suffix[2 * MAX_HWADDR_LEN + 1] = { 0 };
 
     if (gethostname(host, sizeof(host)) || !host[0]) {
         snprintf(host, sizeof(host), "UxPlay");
     }
     host[sizeof(host) - 1] = '\0';
     dnssd_sanitize_label(host);
-    snprintf(dst, dst_len, "%s.local", host);
+    /* Vcast: this responder does no probing, so it must not claim the
+     * computer's own host name (Avahi, or Windows' own mDNS, already announce
+     * it, and conflicting records make them rename the host). Use a host name
+     * of its own, unique per receiver (hardware address) and per computer. */
+    host[40] = '\0';
+    if (hw_addr_len > 3) {
+        utils_hwaddr_raop(suffix, sizeof(suffix), hw_addr + hw_addr_len - 3, 3);
+    }
+    snprintf(dst, dst_len, "%s-AirPlay-%s.local", host, suffix);
 }
 
 static int dnssd_prepare_names(dnssd_private_t *dnssd, dnssd_t *dnssd_public)
@@ -89,7 +99,8 @@ static int dnssd_prepare_names(dnssd_private_t *dnssd, dnssd_t *dnssd_public)
         return -1;
     }
 
-    dnssd_make_host_name(dnssd->host_name, sizeof(dnssd->host_name));
+    dnssd_make_host_name(dnssd->host_name, sizeof(dnssd->host_name),
+                         dnssd_public->hw_addr, dnssd_public->hw_addr_len);
     return 0;
 }
 

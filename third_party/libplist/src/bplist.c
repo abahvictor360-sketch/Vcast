@@ -112,7 +112,7 @@ uint16_t get_unaligned_16(uint16_t *ptr)
 #define get_unaligned(ptr)			  \
   ({                                              \
     struct __attribute__((packed)) {		  \
-      typeof(*(ptr)) __v;			  \
+      __typeof__(*(ptr)) __v;			  \
     } *__p = (void *) (ptr);			  \
     __p->__v;					  \
   })
