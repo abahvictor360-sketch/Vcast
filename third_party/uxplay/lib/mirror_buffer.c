@@ -12,6 +12,7 @@
  * Lesser General Public License for more details.
  *
  *================================================================
+ * modified for Vcast 2026: short payloads no longer overrun the buffers
  * modified by fduncanh 2022
  */
 
@@ -93,6 +94,17 @@ mirror_buffer_init(logger_t *logger, const unsigned char *aeskey)
 
 void mirror_buffer_decrypt(mirror_buffer_t *mirror_buffer, unsigned char* input, unsigned char* output, int inputLen) {
     // Start decrypting
+    if (mirror_buffer->nextDecryptCount > inputLen) {
+        /* (Vcast) a payload shorter than the keystream left over from the
+         * previous one: use part of it and keep the rest (this read and wrote
+         * past the end of the buffers before) */
+        int start = 16 - mirror_buffer->nextDecryptCount;
+        for (int i = 0; i < inputLen; i++) {
+            output[i] = (input[i] ^ mirror_buffer->og[start + i]);
+        }
+        mirror_buffer->nextDecryptCount -= inputLen;
+        return;
+    }
     if (mirror_buffer->nextDecryptCount > 0) {//mirror_buffer->nextDecryptCount = 10
         for (int i = 0; i < mirror_buffer->nextDecryptCount; i++) {
             output[i] = (input[i] ^ mirror_buffer->og[(16 - mirror_buffer->nextDecryptCount) + i]);

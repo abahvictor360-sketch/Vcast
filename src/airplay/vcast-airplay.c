@@ -56,6 +56,8 @@ struct vcast_airplay {
 	int missed_feedback;
 	bool reset_requested;
 	float volume_db;
+	int64_t clock_offset; /* monotonic - sender clock, per session */
+	bool clock_offset_set;
 
 	/* audio format of the current stream (audio thread + SETUP) */
 	unsigned char audio_ct;
@@ -127,18 +129,24 @@ uint64_t vcast_airplay_now_ns(void)
 #endif
 }
 
-/* UxPlay's local times are wall-clock (Unix epoch) nanoseconds: map one onto
- * the monotonic clock. 0 stays 0 (unknown). */
-static uint64_t local_to_monotonic(uint64_t wall_ns)
+/* Map a sender timestamp (ns on the sender's clock, as UxPlay reports it in
+ * ntp_time_remote) to our monotonic clock. Like UxPlay's own renderers, the
+ * offset is fixed by the first audio or video frame of a session, so audio and
+ * video stay in sync with each other. (UxPlay never fills ntp_time_local.) */
+static uint64_t remote_to_monotonic(vcast_airplay_t *ap, uint64_t remote_ns)
 {
-	if (!wall_ns)
+	int64_t offset;
+	if (!remote_ns)
 		return 0;
-	uint64_t wall_now = vcast_realtime_ns();
-	uint64_t mono_now = vcast_airplay_now_ns();
-	int64_t delta = (int64_t)(wall_ns - wall_now);
-	if (delta < 0 && (uint64_t)(-delta) >= mono_now)
-		return 0;
-	return (uint64_t)((int64_t)mono_now + delta);
+	MUTEX_LOCK(ap->lock);
+	if (!ap->clock_offset_set) {
+		ap->clock_offset = (int64_t)(vcast_airplay_now_ns() - remote_ns);
+		ap->clock_offset_set = true;
+	}
+	offset = ap->clock_offset;
+	MUTEX_UNLOCK(ap->lock);
+	int64_t ts = (int64_t)remote_ns + offset;
+	return ts > 0 ? (uint64_t)ts : 0;
 }
 
 /* Does the Annex-B access unit contain a random access picture? */
@@ -241,6 +249,7 @@ static void end_session_locked(vcast_airplay_t *ap, bool *notify)
 	*notify = ap->session_active && !ap->stopping;
 	ap->session_active = false;
 	ap->missed_feedback = 0;
+	ap->clock_offset_set = false;
 }
 
 static void notify_disconnect(vcast_airplay_t *ap, bool notify)
@@ -343,6 +352,7 @@ static void cb_report_client_request(void *cls, char *deviceid, char *model, cha
 		end_session_locked(ap, &notify_old);
 	ap->session_active = !stopping;
 	ap->missed_feedback = 0;
+	ap->clock_offset_set = false;
 	MUTEX_UNLOCK(ap->lock);
 
 	notify_disconnect(ap, notify_old);
@@ -413,7 +423,7 @@ static void cb_audio_process(void *cls, raop_ntp_t *ntp, audio_decode_struct *da
 	}
 	if (ap->cb.on_audio)
 		ap->cb.on_audio(ap->cb.opaque, data->data, (size_t)data->data_len,
-				local_to_monotonic(data->ntp_time_local));
+				remote_to_monotonic(ap, data->ntp_time_remote));
 }
 
 static void cb_video_process(void *cls, raop_ntp_t *ntp, video_decode_struct *data)
@@ -432,7 +442,7 @@ static void cb_video_process(void *cls, raop_ntp_t *ntp, video_decode_struct *da
 		size_t size = (size_t)data->data_len;
 		bool keyframe = annexb_is_keyframe(data->data, size, data->is_h265);
 		ap->cb.on_video(ap->cb.opaque, data->is_h265 ? VCAST_AIRPLAY_VIDEO_H265 : VCAST_AIRPLAY_VIDEO_H264,
-				data->data, size, local_to_monotonic(data->ntp_time_local), keyframe ? 1 : 0);
+				data->data, size, remote_to_monotonic(ap, data->ntp_time_remote), keyframe ? 1 : 0);
 	}
 }
 

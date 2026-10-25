@@ -14,6 +14,7 @@
  *
  *=================================================================
  * modified by fduncanh 2021-2023
+ * modified for Vcast 2026 (see third_party/README.md)
  */
 
 #ifndef RAOP_NTP_H

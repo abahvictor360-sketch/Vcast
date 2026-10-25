@@ -10,6 +10,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  Lesser General Public License for more details.
+ * modified for Vcast 2026 (see third_party/README.md)
  */
 
 #include <stdlib.h>
@@ -56,6 +57,10 @@ fairplay_setup(fairplay_t *fp, const unsigned char req[16], unsigned char res[14
     }
 
     int mode = req[14];
+    if (mode < 0 || mode > 3) {
+        /* (Vcast) reply_message has 4 entries: don't read past it */
+        return -1;
+    }
     memcpy(res, reply_message[mode], 142);
     fp->keymsglen = 0;
     return 0;
@@ -71,6 +76,10 @@ fairplay_handshake(fairplay_t *fp, const unsigned char req[164], unsigned char r
         return -1;
     }
 
+    if (req[12] > 3) {
+        /* (Vcast) playfair indexes 4-entry tables with this mode byte */
+        return -1;
+    }
     memcpy(fp->keymsg, req, 164);
     fp->keymsglen = 164;
 

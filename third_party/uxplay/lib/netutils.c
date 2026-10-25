@@ -13,6 +13,7 @@
  *
  *==================================================================
  * modified by fduncanh 2022
+ * modified for Vcast 2026 (see third_party/README.md)
  */
 
 #include <stdlib.h>

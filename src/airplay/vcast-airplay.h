@@ -22,16 +22,17 @@
  * returns; once destroy has started, only on_log may still be called. Do not
  * hold a lock in the caller of vcast_airplay_destroy() that a callback takes.
  *
- * Timestamps (ts_ns): the sender's presentation time of the frame, converted
- * from the sender's clock (via AirPlay's NTP exchange) to this computer's
- * monotonic clock, in nanoseconds, on the same base as OBS's os_gettime_ns()
- * (CLOCK_MONOTONIC on Linux, CLOCK_UPTIME_RAW on macOS, QueryPerformanceCounter
- * on Windows); see vcast_airplay_now_ns(). Audio and video timestamps share
- * that base, so they can be used for A/V sync. They are typically a little in
- * the past when delivered (capture time on the sender) for video, and in the
- * near future for audio (AirPlay schedules audio ahead). 0 means unknown: the
- * clock exchange with the sender has not completed yet (first frames of a
- * session).
+ * Timestamps (ts_ns): the sender's presentation timestamps (audio and video
+ * share the sender's clock), mapped to this computer's monotonic clock in
+ * nanoseconds, on the same base as OBS's os_gettime_ns() (CLOCK_MONOTONIC on
+ * Linux, CLOCK_UPTIME_RAW on macOS, QueryPerformanceCounter on Windows); see
+ * vcast_airplay_now_ns(). As in UxPlay's own renderers, the offset between
+ * the two clocks is fixed when the first audio or video frame of a session
+ * arrives (that frame gets ts_ns = now), so audio and video stay in sync with
+ * each other; drift between the sender's clock and ours is not corrected
+ * (typically well under 0.1 s per hour). Audio timestamps run ahead of video
+ * (AirPlay sends audio early, with its intended playout time). 0 means
+ * unknown (only if the sender gave no timestamp).
  *
  * Network: the receiver listens on TCP (RTSP/HTTP control + mirroring stream)
  * and UDP (NTP timing, audio control, audio data), see vcast_airplay_create().

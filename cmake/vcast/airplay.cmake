@@ -182,7 +182,7 @@ if(WIN32)
   target_link_libraries(vcast-airplay PUBLIC ws2_32 iphlpapi)
 elseif(NOT APPLE)
   find_package(Threads REQUIRED)
-  target_link_libraries(vcast-airplay PUBLIC Threads::Threads)
+  target_link_libraries(vcast-airplay PUBLIC Threads::Threads m)
 endif()
 
 if(VCAST_BUILD_TESTS)

@@ -1,3 +1,4 @@
+/* modified for Vcast 2026 (see third_party/README.md) */
 
 #ifndef INCLUDE_LLHTTP_H_
 #define INCLUDE_LLHTTP_H_

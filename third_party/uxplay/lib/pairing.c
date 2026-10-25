@@ -541,6 +541,7 @@ srp_new_user(pairing_session_t *session, pairing_t *pairing, const char *device_
     memcpy(session->srp->verifier, srp_v, SRP_VERIFIER_SIZE);
     free(srp_s);
     free(srp_v);
+    srp_v = session->srp->verifier;
 
     *salt = (char *) session->srp->salt;
     *len_salt = len_s;

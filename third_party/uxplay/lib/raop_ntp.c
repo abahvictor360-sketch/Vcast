@@ -14,6 +14,7 @@
  *
  *=================================================================
  * modified by fduncanh 2021-23
+ * modified for Vcast 2026 (see third_party/README.md)
  */
 
 // Some of the code in here comes from https://github.com/juhovh/shairplay/pull/25/files
