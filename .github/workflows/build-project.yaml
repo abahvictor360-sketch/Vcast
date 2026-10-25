@@ -170,6 +170,14 @@ jobs:
           codesignUser: ${{ secrets.MACOS_NOTARIZATION_USERNAME }}
           codesignPass: ${{ secrets.MACOS_NOTARIZATION_PASSWORD }}
 
+      - name: Verify Plugin 🔍
+        run: |
+          : Verify Plugin 🔍
+          binary=$(find release -path '*vcast.plugin/Contents/MacOS/vcast' | head -1)
+          otool -L "${binary}"
+          lipo -archs "${binary}"
+          ls -la release
+
       - name: Upload Artifacts 📡
         uses: actions/upload-artifact@v4
         with:
@@ -319,6 +327,15 @@ jobs:
           target: x64
           config: ${{ needs.check-event.outputs.config }}
           package: ${{ fromJSON(needs.check-event.outputs.package) }}
+
+      - name: Verify Plugin 🔍
+        shell: pwsh
+        run: |
+          # Show what vcast.dll links against (must only be OBS, Qt, FFmpeg and Windows DLLs)
+          $Dll = Get-ChildItem -Recurse -Filter vcast.dll release | Select-Object -First 1
+          $DumpBin = Get-ChildItem -Recurse "${env:ProgramFiles}\Microsoft Visual Studio" -Filter dumpbin.exe | Where-Object FullName -like '*Hostx64\x64*' | Select-Object -First 1
+          & $DumpBin.FullName /dependents $Dll.FullName
+          Get-ChildItem release -File | Format-Table Name, Length
 
       - name: Upload Artifacts 📡
         uses: actions/upload-artifact@v4
