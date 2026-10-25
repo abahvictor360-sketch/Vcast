@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Vcast</string>
+    <string name="intro">Mirror this phone\'s screen to OBS. In OBS, add a \"Vcast Receiver\" source; keep the phone and the PC on the same Wi-Fi.</string>
+    <string name="stop">Stop</string>
+    <string name="quality">Quality</string>
+    <string name="quality_720">720p</string>
+    <string name="quality_1080">1080p</string>
+    <string name="share_audio">Share phone audio</string>
+    <string name="audio_note_old">Sharing audio needs Android 10 or newer.</string>
+    <string name="audio_note">Includes sound from apps that allow capture (most video and music apps).</string>
+    <string name="receivers">OBS receivers on this network</string>
+    <string name="searching">Searching… Make sure OBS is open and has a Vcast Receiver source.</string>
+    <string name="manual">Connect by address</string>
+    <string name="manual_hint">IP or IP:port, e.g. 192.168.1.20</string>
+    <string name="cast_screen">Cast screen</string>
+    <string name="invalid_address">Enter an IP address, optionally with :port</string>
+    <string name="status_idle">Not casting</string>
+    <string name="status_connecting">Connecting to %1$s…</string>
+    <string name="status_casting">Casting to %1$s</string>
+    <string name="capture_denied">Screen capture was not allowed</string>
+    <string name="audio_permission_denied">Microphone permission denied; casting without audio.</string>
+    <string name="channel_name">Screen casting</string>
+    <string name="notification_connecting">Connecting to %1$s…</string>
+    <string name="notification_casting">Casting screen to %1$s</string>
+    <string name="cast_to">Cast to %1$s</string>
+    <string name="tile_label">Cast to OBS</string>
+    <string name="tile_header">Quick Settings tile</string>
+    <string name="tile_help">Cast with one tap from the notification shade, like the phone\'s own Cast button. Add \"Cast to OBS\" to Quick Settings: swipe down twice, tap the pencil/edit icon, then drag the \"Cast to OBS\" tile into place. Tapping it casts to the OBS you used last; tapping it again stops.</string>
+    <string name="add_tile">Add tile to Quick Settings</string>
+    <string name="tile_added">\"Cast to OBS\" was added to Quick Settings</string>
+    <string name="tile_already_added">\"Cast to OBS\" is already in Quick Settings</string>
+    <string name="tile_add_manually">Could not add the tile automatically; add it from the Quick Settings edit screen.</string>
+    <string name="tile_connecting">Connecting…</string>
+    <string name="looking_for">Looking for %1$s…</string>
+    <string name="not_reachable">%1$s is not reachable. Pick a receiver.</string>
+</resources>
