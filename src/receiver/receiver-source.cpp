@@ -52,7 +52,8 @@ namespace {
 
 constexpr uint16_t kWebPort = 8443;
 #ifdef VCAST_HAVE_AIRPLAY
-constexpr uint16_t kAirPlayPortBase = 7000;
+/* 7000 is taken by macOS' own AirPlay Receiver (Control Center) on most Macs. */
+constexpr uint16_t kAirPlayPortBase = 7100;
 #endif
 
 std::string random_id()
@@ -274,8 +275,14 @@ private:
 		};
 
 		char err[256] = {};
-		uint16_t base = (uint16_t)(kAirPlayPortBase + slot_ * 10);
-		airplay_ = vcast_airplay_create(name().c_str(), base, &cb, err, sizeof(err));
+		/* Ports can be reserved by other software (e.g. Hyper-V/WSL port
+		 * exclusions on Windows), so try a few ranges before giving up. */
+		for (int attempt = 0; attempt < 5 && !airplay_; attempt++) {
+			uint16_t base = (uint16_t)(kAirPlayPortBase + slot_ * 10 + attempt * 1000);
+			airplay_ = vcast_airplay_create(name().c_str(), base, &cb, err, sizeof(err));
+			if (!airplay_)
+				obs_log(LOG_INFO, "[%s] AirPlay ports %u+ unavailable (%s)", name().c_str(), base, err);
+		}
 		airplay_running_ = airplay_ != nullptr;
 		{
 			std::lock_guard<std::mutex> lock(config_mutex_);

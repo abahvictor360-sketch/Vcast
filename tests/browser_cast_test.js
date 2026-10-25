@@ -16,6 +16,12 @@ const { chromium } = require('playwright');
   });
   const context = await browser.newContext({ ignoreHTTPSErrors: true });
   const page = await context.newPage();
+  if (process.env.FORCE_CODEC) {
+    await page.addInitScript((codec) => {
+      const orig = MediaRecorder.isTypeSupported.bind(MediaRecorder);
+      MediaRecorder.isTypeSupported = (t) => (t.includes(codec) || !t.includes('codecs=')) && orig(t) && !(t === 'video/webm' && false);
+    }, process.env.FORCE_CODEC);
+  }
   page.on('console', (m) => console.log('[page]', m.text()));
   await page.goto(url);
   console.log('SECURE', await page.evaluate(() => window.isSecureContext));

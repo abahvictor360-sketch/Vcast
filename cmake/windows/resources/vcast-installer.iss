@@ -38,9 +38,11 @@ Source: "{#SourceDir}\bin\64bit\*.pdb"; DestDir: "{app}\bin\64bit"; Flags: ignor
 Source: "{#SourceDir}\data\*"; DestDir: "{app}\data"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Run]
-; Let phones and laptops on private (home) networks reach OBS: AirPlay, the cast page and the Vcast app.
+; Let phones and laptops on the local network reach OBS (AirPlay, cast page, Vcast app). Many home
+; Wi-Fi networks are classified as "Public" by Windows, so the rule covers every profile; it only
+; applies to obs64.exe.
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""Vcast for OBS Studio"""; Flags: runhidden
-Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""Vcast for OBS Studio"" dir=in action=allow program=""{code:ObsExe}"" enable=yes profile=private,domain"; Flags: runhidden; StatusMsg: "Allowing OBS through Windows Firewall on private networks..."
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""Vcast for OBS Studio"" dir=in action=allow program=""{code:ObsExe}"" enable=yes profile=any"; Flags: runhidden; StatusMsg: "Allowing OBS through Windows Firewall..."
 
 [UninstallRun]
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""Vcast for OBS Studio"""; Flags: runhidden; RunOnceId: "VcastFirewall"

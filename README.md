@@ -14,7 +14,7 @@ directions:
 | Ubuntu 24.04 | `vcast-…-x86_64-linux-gnu.deb` |
 | Android phone (sender app) | `vcast-android.apk` |
 
-Requires OBS Studio 32 or newer. Then follow **[docs/INSTALL.md](docs/INSTALL.md)**.
+Requires OBS Studio 32.2 or newer. Then follow **[docs/INSTALL.md](docs/INSTALL.md)**.
 
 **Receive: show a phone, tablet or laptop screen in OBS**
 
@@ -188,7 +188,7 @@ Laptop browser ──HTTPS page + WebSocket WebM──┘
 - The **Android app** protocol is documented in
   [docs/protocol.md](docs/protocol.md).
 
-Ports used (TCP unless noted): 7000+ (AirPlay), 8443 (cast page), 48690
+Ports used (TCP unless noted): 7100+ (AirPlay), 8443 (cast page), 48690
 (Android app), UDP 48689 (app discovery), UDP 5353 (mDNS), 8090 (TV stream).
 
 ## License
