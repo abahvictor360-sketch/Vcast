@@ -225,13 +225,33 @@ class CastService : Service() {
             }
         }
 
+        /**
+         * Rotation / resolution changes: a new display size makes the encoder thread recreate
+         * the codec, resize the VirtualDisplay and send a new VIDEO_CONFIG + keyframe (OBS
+         * scales the new picture to fit). On Android 14+ onCapturedContentResize reports the
+         * captured size directly (it also covers single-app capture).
+         */
+        private fun checkDisplaySize() {
+            if (contentSize != null) return
+            val (w, h, _) = displayInfo()
+            video?.onSourceSizeChanged(w, h)
+        }
+
         private val displayListener = object : DisplayManager.DisplayListener {
             override fun onDisplayAdded(displayId: Int) {}
             override fun onDisplayRemoved(displayId: Int) {}
             override fun onDisplayChanged(displayId: Int) {
-                if (displayId != Display.DEFAULT_DISPLAY || contentSize != null) return
-                val (w, h, _) = displayInfo()
-                video?.onSourceSizeChanged(w, h)
+                if (displayId == Display.DEFAULT_DISPLAY) checkDisplaySize()
+            }
+        }
+
+        // Some devices do not report rotation through DisplayListener reliably; poll as well
+        // (cheap: the encoder ignores sizes it already uses).
+        private val rotationCheck = object : Runnable {
+            override fun run() {
+                if (stopped) return
+                checkDisplaySize()
+                main.postDelayed(this, ROTATION_POLL_MS)
             }
         }
 
@@ -279,6 +299,10 @@ class CastService : Service() {
                 a.start()
             }
             publishCasting(null)
+            main.post {
+                CastTileService.refresh(this@CastService)
+                main.postDelayed(rotationCheck, ROTATION_POLL_MS)
+            }
         }
 
         private fun describeConnectError(e: IOException): String {
@@ -326,6 +350,7 @@ class CastService : Service() {
             audio?.stop()
             connection?.close()
             main.post {
+                main.removeCallbacks(rotationCheck)
                 try {
                     (getSystemService(Context.DISPLAY_SERVICE) as DisplayManager).unregisterDisplayListener(displayListener)
                     projection.unregisterCallback(projectionCallback)
@@ -338,6 +363,7 @@ class CastService : Service() {
                     CastState.post(if (error == null) CastState.Status.Idle("Stopped") else CastState.Status.Error(error))
                     if (session == null) stopSelfCompletely()
                 }
+                CastTileService.refresh(this@CastService)
             }
         }
 
@@ -383,6 +409,7 @@ class CastService : Service() {
         private const val TAG = "VcastService"
         private const val CHANNEL_ID = "cast"
         private const val NOTIFICATION_ID = 1
+        private const val ROTATION_POLL_MS = 1000L
 
         const val ACTION_START = "com.vcast.sender.START"
         const val ACTION_STOP = "com.vcast.sender.STOP"

@@ -23,4 +23,15 @@
     <string name="channel_name">Screen casting</string>
     <string name="notification_connecting">Connecting to %1$s…</string>
     <string name="notification_casting">Casting screen to %1$s</string>
+    <string name="cast_to">Cast to %1$s</string>
+    <string name="tile_label">Cast to OBS</string>
+    <string name="tile_header">Quick Settings tile</string>
+    <string name="tile_help">Cast with one tap from the notification shade, like the phone\'s own Cast button. Add \"Cast to OBS\" to Quick Settings: swipe down twice, tap the pencil/edit icon, then drag the \"Cast to OBS\" tile into place. Tapping it casts to the OBS you used last; tapping it again stops.</string>
+    <string name="add_tile">Add tile to Quick Settings</string>
+    <string name="tile_added">\"Cast to OBS\" was added to Quick Settings</string>
+    <string name="tile_already_added">\"Cast to OBS\" is already in Quick Settings</string>
+    <string name="tile_add_manually">Could not add the tile automatically; add it from the Quick Settings edit screen.</string>
+    <string name="tile_connecting">Connecting…</string>
+    <string name="looking_for">Looking for %1$s…</string>
+    <string name="not_reachable">%1$s is not reachable. Pick a receiver.</string>
 </resources>

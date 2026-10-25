@@ -105,6 +105,56 @@ class Discovery(context: Context, private val onUpdate: (List<Receiver>) -> Unit
         return list
     }
 
+    /**
+     * Blocking one-shot check that [target] is answering discovery. Asks it directly and by
+     * broadcast; returns the receiver as it answered (address/port may have changed when the
+     * PC got a new IP but kept its name), or null after [timeoutMs].
+     */
+    fun probe(target: Receiver, timeoutMs: Long = 1500): Receiver? {
+        var byName: Receiver? = null
+        try {
+            DatagramSocket().use { s ->
+                s.broadcast = true
+                s.soTimeout = 150
+                val direct = try {
+                    InetAddress.getByName(target.address)
+                } catch (e: Exception) {
+                    null
+                }
+                val buf = ByteArray(2048)
+                val deadline = System.currentTimeMillis() + timeoutMs
+                var nextSend = 0L
+                while (System.currentTimeMillis() < deadline) {
+                    if (System.currentTimeMillis() >= nextSend) {
+                        nextSend = System.currentTimeMillis() + 500
+                        if (direct != null) {
+                            try {
+                                val q = Protocol.DISCOVERY_QUERY
+                                s.send(DatagramPacket(q, q.size, direct, Protocol.DISCOVERY_PORT))
+                            } catch (e: Exception) {
+                                Log.d(TAG, "probe ${target.address}: ${e.message}")
+                            }
+                        }
+                        sendQueries(s)
+                    }
+                    val p = DatagramPacket(buf, buf.size)
+                    try {
+                        s.receive(p)
+                    } catch (e: SocketTimeoutException) {
+                        continue
+                    }
+                    val reply = Protocol.parseDiscoveryReply(p.data, p.length) ?: continue
+                    val r = Receiver(reply.name, p.address.hostAddress ?: continue, reply.port)
+                    if (r.key == target.key || (direct != null && p.address == direct && r.port == target.port)) return r
+                    if (r.name == target.name && target.name != target.address) byName = r
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "probe failed", e)
+        }
+        return byName
+    }
+
     private fun sendQueries(s: DatagramSocket) {
         val targets = LinkedHashSet<InetAddress>()
         targets.add(InetAddress.getByName("255.255.255.255"))
