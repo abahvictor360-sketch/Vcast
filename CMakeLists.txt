@@ -17,6 +17,8 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE OBS::libobs)
 
 include(cmake/vcast/mbedtls.cmake)
 include(cmake/vcast/ffmpeg.cmake)
+include(cmake/vcast/airplay.cmake)
+target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE vcast-airplay)
 target_link_libraries(
   ${CMAKE_PROJECT_NAME}
   PRIVATE mbedtls mbedx509 mbedcrypto VcastFFmpeg::avcodec VcastFFmpeg::avformat VcastFFmpeg::avutil
