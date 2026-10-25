@@ -33,6 +33,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <util/platform.h>
 
 #include <algorithm>
+#include <cstring>
 #include <atomic>
 #include <fstream>
 #include <memory>
@@ -566,6 +567,7 @@ namespace {
 
 struct SourceData {
 	std::shared_ptr<ReceiverSource> receiver;
+	obs_source_t *source = nullptr;
 };
 
 const char *receiver_get_name(void *)
@@ -585,6 +587,7 @@ void receiver_defaults(obs_data_t *settings)
 void *receiver_create(obs_data_t *settings, obs_source_t *source)
 {
 	auto *data = new SourceData();
+	data->source = source;
 	data->receiver = std::make_shared<ReceiverSource>(source);
 	obs_source_set_async_unbuffered(source, true);
 	ReceiverHub::get().add(data->receiver);
@@ -603,6 +606,14 @@ void receiver_destroy(void *ptr)
 void receiver_update(void *ptr, obs_data_t *settings)
 {
 	static_cast<SourceData *>(ptr)->receiver->apply(settings);
+}
+
+bool fit_clicked(obs_properties_t *, obs_property_t *, void *ptr)
+{
+	auto *data = static_cast<SourceData *>(ptr);
+	if (data)
+		vcast_receiver_fit_to_screen(data->source, false);
+	return false;
 }
 
 bool refresh_status(obs_properties_t *props, obs_property_t *, void *ptr)
@@ -651,6 +662,7 @@ obs_properties_t *receiver_properties(void *ptr)
 	obs_properties_add_bool(props, "android", obs_module_text("Vcast.Receiver.Android"));
 	obs_properties_add_bool(props, "browser", obs_module_text("Vcast.Receiver.Browser"));
 	obs_properties_add_bool(props, "keep_last_frame", obs_module_text("Vcast.Receiver.KeepLastFrame"));
+	obs_properties_add_button2(props, "fit", obs_module_text("Vcast.FitToScreen"), fit_clicked, data);
 	return props;
 }
 
@@ -675,6 +687,80 @@ void vcast_register_receiver_source()
 void vcast_receiver_shutdown()
 {
 	ReceiverHub::get().shutdown();
+}
+
+namespace {
+
+struct FitContext {
+	obs_source_t *only;
+	bool only_new;
+	int count;
+};
+
+void fit_item(obs_sceneitem_t *item)
+{
+	obs_video_info ovi;
+	if (!obs_get_video_info(&ovi))
+		return;
+	vec2 pos;
+	vec2_zero(&pos);
+	vec2 bounds;
+	vec2_set(&bounds, (float)ovi.base_width, (float)ovi.base_height);
+	obs_sceneitem_crop crop = {};
+
+	obs_sceneitem_defer_update_begin(item);
+	obs_sceneitem_set_alignment(item, OBS_ALIGN_LEFT | OBS_ALIGN_TOP);
+	obs_sceneitem_set_pos(item, &pos);
+	obs_sceneitem_set_rot(item, 0.0f);
+	obs_sceneitem_set_crop(item, &crop);
+	obs_sceneitem_set_bounds_type(item, OBS_BOUNDS_SCALE_INNER);
+	obs_sceneitem_set_bounds_alignment(item, OBS_ALIGN_CENTER);
+	obs_sceneitem_set_bounds(item, &bounds);
+	obs_sceneitem_defer_update_end(item);
+
+	obs_data_t *priv = obs_sceneitem_get_private_settings(item);
+	obs_data_set_bool(priv, "vcast_fitted", true);
+	obs_data_release(priv);
+}
+
+bool fit_scene_item(obs_scene_t *, obs_sceneitem_t *item, void *param)
+{
+	auto *ctx = static_cast<FitContext *>(param);
+	if (obs_sceneitem_is_group(item)) {
+		obs_sceneitem_group_enum_items(item, fit_scene_item, param);
+		return true;
+	}
+	obs_source_t *source = obs_sceneitem_get_source(item);
+	if (!source || strcmp(obs_source_get_id(source), VCAST_RECEIVER_SOURCE_ID) != 0)
+		return true;
+	if (ctx->only && source != ctx->only)
+		return true;
+	if (ctx->only_new) {
+		obs_data_t *priv = obs_sceneitem_get_private_settings(item);
+		bool fitted = obs_data_get_bool(priv, "vcast_fitted");
+		obs_data_release(priv);
+		if (fitted)
+			return true;
+	}
+	fit_item(item);
+	ctx->count++;
+	return true;
+}
+
+} // namespace
+
+int vcast_receiver_fit_to_screen(obs_source_t *only, bool only_new)
+{
+	FitContext ctx = {only, only_new, 0};
+	obs_enum_scenes(
+		[](void *param, obs_source_t *scene_source) {
+			obs_scene_t *scene = obs_scene_from_source(scene_source);
+			if (scene)
+				obs_scene_enum_items(scene, fit_scene_item, param);
+			return true;
+		},
+		&ctx);
+	return ctx.count;
 }
 
 std::string vcast_receiver_web_url()

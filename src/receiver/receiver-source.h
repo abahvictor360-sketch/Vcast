@@ -21,6 +21,8 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <cstdint>
 #include <string>
 
+#include <obs.h>
+
 #define VCAST_RECEIVER_SOURCE_ID "vcast_receiver"
 
 /*
@@ -37,6 +39,14 @@ void vcast_receiver_shutdown();
 
 /* https://<lan-ip>:<port>/ of the cast page, or empty if no receiver exists. */
 std::string vcast_receiver_web_url();
+
+/*
+ * Makes receiver scene items fill the canvas, keeping the picture's aspect
+ * ratio (a rotating phone keeps fitting). only: limit to one source (NULL =
+ * every receiver). only_new: skip items already fitted once, so manual
+ * adjustments are kept. Returns the number of items changed. UI thread only.
+ */
+int vcast_receiver_fit_to_screen(obs_source_t *only, bool only_new);
 
 /* Name of the default receiver ("Vcast (<computer name>)"). */
 std::string vcast_receiver_default_name();

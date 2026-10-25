@@ -65,6 +65,9 @@ VcastDock::VcastDock(QWidget *parent) : QWidget(parent)
 	receiveUrlLabel_->setOpenExternalLinks(true);
 	layout->addWidget(receiveUrlLabel_);
 	connect(addReceiverButton, &QPushButton::clicked, this, &VcastDock::addReceiver);
+	auto *fitButton = new QPushButton(T("Vcast.FitToScreen"), this);
+	layout->addWidget(fitButton);
+	connect(fitButton, &QPushButton::clicked, this, []() { vcast_receiver_fit_to_screen(nullptr, false); });
 
 	auto *line = new QFrame(this);
 	line->setFrameShape(QFrame::HLine);
@@ -391,18 +394,8 @@ void VcastDock::addReceiver()
 		source = obs_source_create(VCAST_RECEIVER_SOURCE_ID, name.c_str(), nullptr, nullptr);
 	}
 	if (source && !obs_scene_find_source(scene, obs_source_get_name(source))) {
-		obs_sceneitem_t *item = obs_scene_add(scene, source);
-		if (item) {
-			/* Fit the phone/laptop picture inside the canvas. */
-			obs_video_info ovi;
-			if (obs_get_video_info(&ovi)) {
-				vec2 bounds;
-				vec2_set(&bounds, (float)ovi.base_width, (float)ovi.base_height);
-				obs_sceneitem_set_bounds_type(item, OBS_BOUNDS_SCALE_INNER);
-				obs_sceneitem_set_bounds_alignment(item, OBS_ALIGN_CENTER);
-				obs_sceneitem_set_bounds(item, &bounds);
-			}
-		}
+		obs_scene_add(scene, source);
+		vcast_receiver_fit_to_screen(source, true);
 	}
 	obs_source_release(source);
 	obs_source_release(scene_source);
@@ -411,6 +404,9 @@ void VcastDock::addReceiver()
 
 void VcastDock::refreshState()
 {
+	/* Receivers added by hand from the Sources list also fill the screen. */
+	vcast_receiver_fit_to_screen(nullptr, true);
+
 	std::string web = vcast_receiver_web_url();
 	QString receiveText = web.empty() ? QString()
 					  : QString(T("Vcast.ReceiveUrl"))
