@@ -22,11 +22,7 @@ set(_vcast_ap_ed "${_vcast_ap_tp}/ed25519")
 function(_vcast_airplay_third_party target)
   set_target_properties(
     ${target}
-    PROPERTIES
-      FOLDER "third_party"
-      POSITION_INDEPENDENT_CODE ON
-      COMPILE_WARNING_AS_ERROR OFF
-      C_VISIBILITY_PRESET hidden
+    PROPERTIES FOLDER "third_party" POSITION_INDEPENDENT_CODE ON COMPILE_WARNING_AS_ERROR OFF C_VISIBILITY_PRESET hidden
   )
   # Drop the plugin's warning level instead of overriding it (MSVC would warn D9025).
   get_target_property(_opts ${target} COMPILE_OPTIONS)
@@ -150,8 +146,13 @@ target_compile_definitions(vcast_airplay_uxplay PRIVATE PLIST_210 PLIST_230 LLHT
 if(WIN32)
   target_compile_definitions(
     vcast_airplay_uxplay
-    PRIVATE _WIN32_WINNT=0x0A00 WINVER=0x0A00 WIN32_LEAN_AND_MEAN NOMINMAX _CRT_SECURE_NO_WARNINGS
-            _WINSOCK_DEPRECATED_NO_WARNINGS
+    PRIVATE
+      _WIN32_WINNT=0x0A00
+      WINVER=0x0A00
+      WIN32_LEAN_AND_MEAN
+      NOMINMAX
+      _CRT_SECURE_NO_WARNINGS
+      _WINSOCK_DEPRECATED_NO_WARNINGS
   )
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   target_compile_definitions(vcast_airplay_uxplay PRIVATE _GNU_SOURCE)

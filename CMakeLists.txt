@@ -19,6 +19,7 @@ include(cmake/vcast/mbedtls.cmake)
 include(cmake/vcast/ffmpeg.cmake)
 include(cmake/vcast/airplay.cmake)
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE vcast-airplay)
+target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE VCAST_HAVE_AIRPLAY)
 target_link_libraries(
   ${CMAKE_PROJECT_NAME}
   PRIVATE mbedtls mbedx509 mbedcrypto VcastFFmpeg::avcodec VcastFFmpeg::avformat VcastFFmpeg::avutil
@@ -115,9 +116,11 @@ if(VCAST_BUILD_TESTS)
   )
   add_executable(vcast-receiver-test tests/receiver-headless.cpp ${VCAST_CORE_SOURCES})
   target_include_directories(vcast-receiver-test PRIVATE src)
+  target_compile_definitions(vcast-receiver-test PRIVATE VCAST_HAVE_AIRPLAY)
   target_link_libraries(
     vcast-receiver-test
     PRIVATE
+      vcast-airplay
       OBS::libobs
       plugin-support
       mbedtls
