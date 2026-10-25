@@ -71,10 +71,17 @@ jobs:
             echo "pluginName=${plugin_name}" >> $GITHUB_OUTPUT
           fi
 
+  android-build:
+    name: Build Android App 🤖
+    uses: ./.github/workflows/android.yaml
+    permissions:
+      contents: read
+
   macos-build:
     name: Build for macOS 🍏
     runs-on: macos-26
-    needs: check-event
+    needs: [check-event, android-build]
+    if: ${{ !cancelled() && needs.check-event.result == 'success' }}
     defaults:
       run:
         shell: zsh --no-rcs --errexit --pipefail {0}
@@ -83,6 +90,13 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
+
+      - name: Bundle Android App 📱
+        uses: actions/download-artifact@v4
+        if: needs.android-build.result == 'success'
+        with:
+          name: vcast-android
+          path: data/android
 
       - name: Set Up Environment 🔧
         id: setup
@@ -181,7 +195,8 @@ jobs:
       matrix:
         os: [ubuntu-24.04]
     runs-on: ${{ matrix.os }}
-    needs: check-event
+    needs: [check-event, android-build]
+    if: ${{ !cancelled() && needs.check-event.result == 'success' }}
     defaults:
       run:
         shell: bash
@@ -190,6 +205,13 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
+
+      - name: Bundle Android App 📱
+        uses: actions/download-artifact@v4
+        if: needs.android-build.result == 'success'
+        with:
+          name: vcast-android
+          path: data/android
 
       - name: Set Up Environment 🔧
         id: setup
@@ -252,7 +274,8 @@ jobs:
   windows-build:
     name: Build for Windows 🪟
     runs-on: windows-2022
-    needs: check-event
+    needs: [check-event, android-build]
+    if: ${{ !cancelled() && needs.check-event.result == 'success' }}
     defaults:
       run:
         shell: pwsh
@@ -261,6 +284,13 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
+
+      - name: Bundle Android App 📱
+        uses: actions/download-artifact@v4
+        if: needs.android-build.result == 'success'
+        with:
+          name: vcast-android
+          path: data/android
 
       - name: Set Up Environment 🔧
         id: setup

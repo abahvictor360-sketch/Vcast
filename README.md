@@ -3,6 +3,19 @@
 Vcast is an OBS Studio plugin for your local Wi‑Fi / network. It works in two
 directions:
 
+## ⬇️ Download
+
+**[Get the latest release →](https://github.com/abahvictor360-sketch/Vcast/releases/latest)**
+
+| Your computer | Download |
+| --- | --- |
+| Windows 10/11 | `vcast-…-windows-x64-Installer.exe` |
+| macOS 13+ | `vcast-…-macos-universal.pkg` |
+| Ubuntu 24.04 | `vcast-…-x86_64-linux-gnu.deb` |
+| Android phone (sender app) | `vcast-android.apk` |
+
+Requires OBS Studio 32 or newer. Then follow **[docs/INSTALL.md](docs/INSTALL.md)**.
+
 **Receive: show a phone, tablet or laptop screen in OBS**
 
 Add a **Vcast Screen Receiver** source. Devices then cast to OBS the way they

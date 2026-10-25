@@ -1,7 +1,6 @@
 name: Android Sender
 run-name: ${{ github.ref_name }} Android sender build
 on:
-  push:
   workflow_dispatch:
   workflow_call:
     outputs:
