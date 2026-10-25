@@ -35,6 +35,11 @@
 #include "utils.h"
 #include "plist/plist.h"
 
+/* Vcast: Windows has no SOL_TCP; the level for TCP options is IPPROTO_TCP. */
+#if defined(_WIN32) && !defined(SOL_TCP)
+#define SOL_TCP IPPROTO_TCP
+#endif
+
 #ifdef _WIN32
 #define CAST (char *)
 /* are these keepalive settings for WIN32 correct? */

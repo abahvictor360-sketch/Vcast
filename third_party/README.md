@@ -90,3 +90,4 @@ Unmodified; `seed.c`, `key_exchange.c` and `add_scalar.c` not included. Its
 public names are renamed with a `vcast_orlp_` prefix at compile time
 (`vcast_ed25519.h` and `VCAST_ED25519_RENAMES` in `airplay.cmake`), because
 UxPlay already defines `ed25519_sign`/`ed25519_verify`.
+- raop_rtp_mirror.c: define SOL_TCP as IPPROTO_TCP on Windows (MSVC lacks it).
