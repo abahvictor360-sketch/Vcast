@@ -9,6 +9,7 @@
 !/data
 !/src
 !/docs
+!/site
 !/tests
 !/third_party
 !.clang-format

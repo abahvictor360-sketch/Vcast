@@ -5,7 +5,7 @@ directions:
 
 ## ⬇️ Download
 
-**[Get the latest release →](https://github.com/abahvictor360-sketch/Vcast/releases/latest)**
+**[Get the latest release →](https://github.com/abahvictor360-sketch/Vcast/releases/latest)** · 🌐 **[Website & guide](https://abahvictor360-sketch.github.io/Vcast/)**
 
 | Your computer | Download |
 | --- | --- |
