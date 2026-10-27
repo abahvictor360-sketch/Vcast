@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Vcast</string>
-    <string name="intro">Mirror this phone\'s screen to OBS. In OBS, add a \"Vcast Receiver\" source; keep the phone and the PC on the same Wi-Fi.</string>
+    <string name="intro">Mirror this phone\'s screen to OBS. In OBS, add a \"Vcast Screen Receiver\" source; keep the phone and the PC on the same Wi-Fi.</string>
     <string name="stop">Stop</string>
     <string name="quality">Quality</string>
     <string name="quality_720">720p</string>
@@ -10,7 +10,7 @@
     <string name="audio_note_old">Sharing audio needs Android 10 or newer.</string>
     <string name="audio_note">Includes sound from apps that allow capture (most video and music apps).</string>
     <string name="receivers">OBS receivers on this network</string>
-    <string name="searching">Searching… Make sure OBS is open and has a Vcast Receiver source.</string>
+    <string name="searching">Searching… Make sure OBS is open and has a Vcast Screen Receiver source.</string>
     <string name="manual">Connect by address</string>
     <string name="manual_hint">IP or IP:port, e.g. 192.168.1.20</string>
     <string name="cast_screen">Cast screen</string>
