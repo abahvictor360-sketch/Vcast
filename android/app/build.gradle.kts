@@ -17,7 +17,7 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = System.getenv("VCAST_VERSION_CODE")?.toIntOrNull() ?: 1
-        versionName = "1.0.1"
+        versionName = "1.0.2"
     }
 
     signingConfigs {
