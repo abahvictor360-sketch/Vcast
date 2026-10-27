@@ -1,5 +1,7 @@
 # Vcast — cast screens into OBS, and OBS onto your TV
 
+*Created by [Victor Abah](https://github.com/abahvictor360-sketch).*
+
 Vcast is an OBS Studio plugin for your local Wi‑Fi / network. It works in two
 directions:
 
@@ -190,6 +192,10 @@ Laptop browser ──HTTPS page + WebSocket WebM──┘
 
 Ports used (TCP unless noted): 7100+ (AirPlay), 8443 (cast page), 48690
 (Android app), UDP 48689 (app discovery), UDP 5353 (mDNS), 8090 (TV stream).
+
+## Author
+
+Vcast was created by **Victor Abah** ([@abahvictor360-sketch](https://github.com/abahvictor360-sketch)).
 
 ## License
 
