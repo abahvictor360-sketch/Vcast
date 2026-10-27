@@ -5,19 +5,28 @@ Silicon and Intel) and Ubuntu 24.04.
 
 ## 1. Download
 
-Open the [Actions page](https://github.com/abahvictor360-sketch/Vcast/actions)
-of the Vcast repository and click the newest green (✅) run. Under
-**Artifacts**, download the file for your computer:
+Get the files from the [website](https://abahvictor360-sketch.github.io/Vcast/)
+or the [latest release](https://github.com/abahvictor360-sketch/Vcast/releases/latest):
 
-| Your computer | Download | What's inside |
-| --- | --- | --- |
-| Windows | `vcast-…-windows-x64-…` | `vcast-…-windows-x64-Installer.exe` (installer) and a `.zip` |
-| Mac | `vcast-…-macos-universal-…` | `vcast-…-macos-universal.pkg` (installer) |
-| Ubuntu | `vcast-…-ubuntu-24.04-x86_64-…` | `.deb` package |
+| Your device | File |
+| --- | --- |
+| Windows 10/11 | `vcast-…-windows-x64-Installer.exe` (or the `.zip` for a manual install) |
+| Mac (macOS 13+, Apple Silicon and Intel) | `vcast-…-macos-universal.pkg` |
+| Ubuntu 24.04 | `vcast-…-x86_64-linux-gnu.deb` |
+| Android phone or tablet | `vcast-android.apk` (see [Android app](#android-app) below) |
 
-You need to be signed in to GitHub to download Actions artifacts. They are
-`.zip` files, so unzip them first. Tagged releases also show the same files on
-the [Releases page](https://github.com/abahvictor360-sketch/Vcast/releases).
+iPhones, iPads and Macs need nothing extra: they cast with their built-in
+Screen Mirroring.
+
+### What you need
+
+| Device | Requirement |
+| --- | --- |
+| Computer running OBS | OBS Studio 32.2 or newer, on the same Wi‑Fi / network as the phone |
+| iPhone / iPad | Any model with **Screen Mirroring** in Control Center |
+| Mac (as the device being cast) | Screen Mirroring in the menu bar's Control Center |
+| Android | Android 8.0 or newer. Phone **sound** needs Android 10 or newer |
+| Laptop / Chromebook | Chrome, Edge, Firefox or Safari |
 
 ## 2. Install
 
@@ -84,7 +93,7 @@ In the Vcast dock, click **Add screen receiver to scene**. You can also use
 | --- | --- |
 | **iPhone / iPad** | Open **Control Center** → **Screen Mirroring** → pick **Vcast (your computer name)** |
 | **Mac** | Menu bar **Control Center** → **Screen Mirroring** → **Vcast (…)** |
-| **Android** | Install the **Vcast** app (see below), open it, tap your OBS computer, then tap **Start now** |
+| **Android** | Install the **Vcast** app (see below), open it, tap your OBS computer, then **Cast screen → Start now** |
 | **Windows laptop, Chromebook, Linux, Mac** | In Chrome, Edge, Firefox or Safari open the address shown in the dock, e.g. `https://192.168.1.20:8443`, and press **Share screen** |
 
 **Laptop browsers warn about the certificate.** Vcast uses a private
@@ -93,10 +102,62 @@ not private"*. Click **Advanced → Proceed to 192.168.x.x (unsafe)**. In
 Firefox click *Accept the Risk and Continue*. Your browser only needs this
 once.
 
-**Android app.** On the phone, open `https://<OBS address>:8443/android` (the
-same address as above plus `/android`) and download `vcast-android.apk`. When
-Android asks, allow your browser to *install unknown apps*. The app finds OBS
-automatically. If it doesn't, type the IP address shown in the dock.
+### iPhone, iPad and Mac
+
+1. Open **Control Center**. On iPhone X and newer, swipe down from the
+   top-right corner; on a Mac, click the Control Center icon in the menu bar.
+2. Tap **Screen Mirroring** and choose **Vcast (your computer name)**.
+3. The screen appears in OBS within a few seconds, with the phone's sound.
+   Turn the phone sideways for a landscape picture; Vcast refits it
+   automatically.
+4. To stop, open Control Center → **Screen Mirroring** → **Stop Mirroring**.
+
+If the phone asks for an AirPlay code, it is looking at a different device:
+pick the entry that starts with **Vcast**.
+
+### Android app
+
+**Install it (once).** The app isn't in the Play Store, so Android asks a
+couple of extra questions:
+
+1. Download `vcast-android.apk` on the phone. You can scan the QR code on the
+   [website](https://abahvictor360-sketch.github.io/Vcast/#download), use the
+   [latest release](https://github.com/abahvictor360-sketch/Vcast/releases/latest),
+   or open `https://<OBS address>:8443/android` (the address in the Vcast
+   dock plus `/android`; accept the certificate warning).
+2. Open the downloaded file. When Android says your browser *isn't allowed
+   to install unknown apps*, tap **Settings**, turn on **Allow from this
+   source**, and go back.
+3. If **Google Play Protect** warns about an unknown app, tap **More details →
+   Install anyway**. It warns about every app that isn't from the Play Store.
+
+**Cast.**
+
+1. Open **Vcast**. Your OBS computer appears under *OBS receivers on this
+   network* within a few seconds. If it doesn't, tap **Connect by address**
+   and type the IP shown in the Vcast dock, e.g. `192.168.1.20`.
+2. Optional: pick **720p** or **1080p**, and tick **Share phone audio** to send
+   the phone's sound (Android 10+). Allow the audio permission when asked;
+   Vcast only records what apps play, never the microphone.
+3. Tap your computer, then **Cast screen**. Android 14 and newer ask whether
+   to share **one app** or the **entire screen**: choose **Entire screen**. Tap
+   **Start now**.
+4. To stop, tap **Stop** in the app or in the Vcast notification.
+
+**One-tap casting.** Add the **Cast to OBS** tile to Quick Settings (swipe down
+twice, tap the pencil/edit icon, drag the tile into place, or use **Add tile to
+Quick Settings** in the app). Tapping it casts to the OBS you used last; tap
+it again to stop.
+
+### Apps that show black or have no sound
+
+Netflix, Disney+, Prime Video, banking apps and other protected apps block
+screen recording on iPhone and Android, so they appear black in OBS. On
+Android some apps also refuse to share their sound. That is the app's own
+setting and no casting tool can get around it. YouTube, games, photos,
+browsers and most other apps work.
+
+### More than one device
 
 Only one device shows at a time. When another device starts casting, it
 replaces the current one, like a TV. To show two phones at once, add a second
@@ -140,8 +201,25 @@ VLC.
     block this.
   - Make sure *Accept AirPlay* is ticked in the source's properties.
   - On Windows, make sure the network is set to **Private**, not Public.
+- **The Android app doesn't find OBS.**
+  - OBS must be open with a *Vcast Screen Receiver* source that has *Accept
+    the Vcast Android app* ticked.
+  - Same Wi‑Fi, not a guest network, no VPN. Then try **Connect by address**
+    with the IP from the Vcast dock.
+  - Windows: the network must be **Private**. Other firewalls must allow UDP
+    48689 (finding OBS) and TCP 48690 (the picture).
+- **Android: picture but no sound.** Tick *Share phone audio* before casting
+  and allow the audio permission (Settings → Apps → Vcast → Permissions if you
+  refused it). It needs Android 10+, and some apps block it (see above).
+- **Android: casting stops when the screen turns off or after a while.**
+  Some phones (Samsung, Xiaomi, Huawei, OnePlus) close background apps to save
+  battery. Go to Settings → Apps → Vcast → Battery and choose **Unrestricted**
+  (or turn off battery optimisation for Vcast).
 - **Picture appears, then freezes.** Move closer to the router or use 5 GHz
   Wi‑Fi. On the laptop page, choose 720p.
+- **Ports used** (allow these in any third-party firewall): TCP 7100 and up
+  plus UDP 5353 (AirPlay and its discovery), UDP 48689 and TCP 48690 (Android
+  app), TCP 8443 (laptop cast page), TCP 8090 (TV stream).
 - **Port already in use.** Vcast tries the next free ports automatically. The
   address in the dock always shows the current one.
 - **Log file.** Go to **Help → Log Files → View Current Log** and look for

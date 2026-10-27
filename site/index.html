@@ -529,7 +529,7 @@ footer { padding: 60px 0 40px; }
           </ol></div>
           <div class="panel-t" data-group="cast" data-panel="android" hidden><ol>
             <li>Install the <b>Vcast</b> app from the download above, or open <code>https://&lt;your-PC&gt;:8443/android</code> on the phone. Allow installing apps from your browser when asked.</li>
-            <li>Open Vcast, tap your OBS computer, then tap <b>Start now</b>.</li>
+            <li>Open Vcast, tap your OBS computer, then <b>Cast screen</b>. If Android offers a choice, pick <b>Entire screen</b> (not a single app), then tap <b>Start now</b>. Tick <b>Share phone audio</b> first for sound (Android 10+).</li>
             <li>Add the <b>Cast to OBS</b> tile to Quick Settings (swipe down twice → pencil icon → drag the tile) for one-tap casting.</li>
           </ol>
           <p class="note">Android's built-in "Cast" button only works with Google-certified devices, so OBS can't appear there. The Vcast app and its tile take its place.</p></div>
@@ -571,8 +571,23 @@ footer { padding: 60px 0 40px; }
         </ul></details>
         <details><summary>Why isn't OBS in my Android phone's Cast menu?</summary>
           <p>Android's Cast menu (Google Cast / Chromecast) only lists devices with a security certificate issued by Google, which no PC software can get. The free Vcast app and its <b>Cast to OBS</b> tile give you the same one-tap experience. On Windows you can also use the built-in <b>Wireless Display</b> receiver (Settings → System → Projecting to this PC) with a Window Capture.</p></details>
+        <details><summary>Which phones work?</summary><ul>
+          <li><b>iPhone and iPad:</b> any model with <b>Screen Mirroring</b> in Control Center. Nothing to install on the phone.</li>
+          <li><b>Mac:</b> Screen Mirroring in the menu bar, no app needed.</li>
+          <li><b>Android:</b> Android 8.0 or newer with the free Vcast app. Phone sound needs Android 10 or newer.</li>
+        </ul></details>
+        <details><summary>The Android app doesn't find my computer</summary><ul>
+          <li>Check that OBS is open and has a <b>Vcast Screen Receiver</b> with <i>Accept the Vcast Android app</i> ticked.</li>
+          <li>Phone and computer must be on the same Wi‑Fi (not a guest network), with no VPN.</li>
+          <li>Tap <b>Connect by address</b> and type the IP shown in the Vcast dock, e.g. <code>192.168.1.20</code>.</li>
+          <li>Windows: set the Wi‑Fi to <b>Private</b>. Firewalls must allow UDP 48689 and TCP 48690.</li>
+        </ul></details>
+        <details><summary>Some apps show a black screen or no sound</summary>
+          <p>Netflix, Disney+, Prime Video, banking apps and similar protected apps block screen recording, on iPhone and Android alike, so they show black in OBS. On Android, a few apps also refuse to share their sound. This is the app's choice and no casting tool can get around it. YouTube, games, photos, browsers and most apps work.</p></details>
+        <details><summary>How do I stop casting?</summary>
+          <p><b>iPhone/iPad:</b> Control Center → Screen Mirroring → <b>Stop Mirroring</b>. <b>Android:</b> tap <b>Stop</b> in the app or in its notification, or tap the <b>Cast to OBS</b> tile again. <b>Laptop:</b> press <b>Stop sharing</b>. Tick <i>Keep showing the last picture</i> in the receiver's properties if you don't want OBS to go blank.</p></details>
         <details><summary>The picture is choppy or delayed</summary>
-          <p>Move closer to the router or use 5 GHz Wi‑Fi. On laptops, choose 720p on the cast page.</p></details>
+          <p>Move closer to the router or use 5 GHz Wi‑Fi. Choose <b>720p</b> in the Android app or on the laptop cast page. A short delay (well under a second) is normal over Wi‑Fi.</p></details>
         <details><summary>OBS says the plugin failed to load</summary>
           <p>Update OBS to 32.2 or newer (Help → About). Then check Help → Log Files → View Current Log for lines starting with <code>[vcast]</code>.</p></details>
         <details><summary>Is it free? Is it safe?</summary>
