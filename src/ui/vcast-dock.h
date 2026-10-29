@@ -49,7 +49,7 @@ private slots:
 	void addByAddress();
 	void openSettings();
 	void copyUrl();
-	void addReceiver();
+	void addReceiver(const char *id, const char *name_key);
 	void refreshState();
 
 private:

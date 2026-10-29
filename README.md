@@ -28,9 +28,11 @@ cast to a smart TV:
 | iPhone, iPad, Mac | Built-in **Screen Mirroring** (AirPlay). Pick "Vcast (your PC)" |
 | Android phone / tablet | The free **Vcast** Android app (in `android/`, served by OBS at `https://<pc>:8443/android`) |
 | Windows laptop, Chromebook, Linux, Mac | Open `https://<pc>:8443` in Chrome / Edge / Firefox / Safari and press **Share screen** |
-| Android "Cast/Smart View", Windows Win+K | Miracast. Use Windows' built-in *Wireless Display* receiver plus Window Capture (see [docs/INSTALL.md](docs/INSTALL.md)) |
+| Windows laptop **Win + K**, Android "Cast / Smart View" | Miracast, Windows OBS only: add the **Vcast Win+K Receiver** source. It drives Windows' built-in *Wireless Display* receiver (see [docs/INSTALL.md](docs/INSTALL.md)) |
 
-Video and sound both come through. If a new device starts casting, it
+Every cast is shown at **1920 × 1080** by default, scaled to fit with black
+bars (an upright phone fills the height). You can change the size in the
+source's properties. Video and sound both come through. If a new device starts casting, it
 replaces the current one, like a TV. Add more receiver sources to show
 several devices at once.
 
@@ -123,7 +125,7 @@ builds Windows, macOS and Ubuntu packages on every push.
 ### Ubuntu / Linux
 
 ```sh
-sudo apt install cmake ninja-build pkg-config libobs-dev qt6-base-dev libavcodec-dev libavformat-dev libavutil-dev
+sudo apt install cmake ninja-build pkg-config libobs-dev qt6-base-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev
 cmake --preset ubuntu-x86_64
 cmake --build build_x86_64
 # Manual install for the current user:

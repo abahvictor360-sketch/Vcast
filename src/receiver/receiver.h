@@ -68,6 +68,8 @@ public:
 	bool alive() const { return alive_; }
 
 	void set_keep_last_frame(bool keep) { keep_last_frame_ = keep; }
+	/* Every cast is shown inside this size (0x0 = the device's own size). */
+	void set_output_size(uint32_t width, uint32_t height) { decoder_.set_output_size(width, height); }
 
 private:
 	StreamDecoder decoder_;

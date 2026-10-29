@@ -30,6 +30,8 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 }
 
+struct SwsContext;
+
 namespace vcast {
 
 /*
@@ -58,6 +60,10 @@ public:
 	void decode_video(const uint8_t *data, size_t size, int64_t pts_us);
 	void decode_audio(const uint8_t *data, size_t size, int64_t pts_us);
 
+	/* Fixed picture size for the OBS source, e.g. 1920x1080: every cast is
+	 * scaled to fit inside it, with black bars. 0x0 keeps the device's size. */
+	void set_output_size(uint32_t width, uint32_t height);
+
 	/* Drops decoder state for a new sender. clear_picture blanks the source. */
 	void reset(bool clear_picture);
 
@@ -82,7 +88,9 @@ private:
 	static void close_codec(Codec &codec);
 	uint64_t map_timestamp(int64_t pts_us);
 	void output_video(AVFrame *frame, uint64_t ts);
+	void output_frame(AVFrame *frame, uint64_t ts);
 	void output_audio(AVFrame *frame, uint64_t ts);
+	AVFrame *fit_to_output(AVFrame *frame, uint32_t out_w, uint32_t out_h, bool full_range);
 
 	obs_source_t *source_;
 	Codec video_;
@@ -91,6 +99,16 @@ private:
 	AVPacket *audio_packet_ = nullptr;
 	AVFrame *video_frame_ = nullptr;
 	AVFrame *audio_frame_ = nullptr;
+
+	/* Letterboxing into the fixed output size; guarded by video_.mutex. */
+	std::atomic<uint32_t> out_width_{1920};
+	std::atomic<uint32_t> out_height_{1080};
+	SwsContext *sws_ = nullptr;
+	AVFrame *scaled_frame_ = nullptr;
+	int scaled_src_w_ = 0;
+	int scaled_src_h_ = 0;
+	int scaled_src_fmt_ = -1;
+	bool scaled_full_range_ = false;
 
 	std::mutex clock_mutex_;
 	bool anchored_ = false;

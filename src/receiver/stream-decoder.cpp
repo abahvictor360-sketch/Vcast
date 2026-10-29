@@ -21,11 +21,14 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <plugin-support.h>
 #include <util/platform.h>
 
+#include <algorithm>
 #include <cstring>
 
 extern "C" {
 #include <libavutil/channel_layout.h>
+#include <libavutil/imgutils.h>
 #include <libavutil/pixdesc.h>
+#include <libswscale/swscale.h>
 }
 
 namespace vcast {
@@ -135,6 +138,94 @@ StreamDecoder::~StreamDecoder()
 	av_packet_free(&audio_packet_);
 	av_frame_free(&video_frame_);
 	av_frame_free(&audio_frame_);
+	av_frame_free(&scaled_frame_);
+	sws_freeContext(sws_);
+}
+
+void StreamDecoder::set_output_size(uint32_t width, uint32_t height)
+{
+	if (!width || !height || width > 7680 || height > 4320)
+		width = height = 0;
+	/* Keep the chroma planes whole. */
+	out_width_ = width & ~1u;
+	out_height_ = height & ~1u;
+}
+
+/* Scales frame to fit inside out_w x out_h, centred on black. The result
+ * keeps the source's YUV range so the colour conversion stays unchanged. */
+AVFrame *StreamDecoder::fit_to_output(AVFrame *frame, uint32_t out_w, uint32_t out_h, bool full_range)
+{
+	if (frame->width <= 0 || frame->height <= 0)
+		return nullptr;
+
+	bool reconfigure = !scaled_frame_ || scaled_frame_->width != (int)out_w ||
+			   scaled_frame_->height != (int)out_h || scaled_src_w_ != frame->width ||
+			   scaled_src_h_ != frame->height || scaled_src_fmt_ != frame->format ||
+			   scaled_full_range_ != full_range;
+	if (!reconfigure)
+		av_frame_make_writable(scaled_frame_);
+
+	if (reconfigure) {
+		av_frame_free(&scaled_frame_);
+		scaled_frame_ = av_frame_alloc();
+		if (!scaled_frame_)
+			return nullptr;
+		scaled_frame_->format = AV_PIX_FMT_YUV420P;
+		scaled_frame_->width = (int)out_w;
+		scaled_frame_->height = (int)out_h;
+		if (av_frame_get_buffer(scaled_frame_, 32) < 0) {
+			av_frame_free(&scaled_frame_);
+			return nullptr;
+		}
+		scaled_src_w_ = frame->width;
+		scaled_src_h_ = frame->height;
+		scaled_src_fmt_ = frame->format;
+		scaled_full_range_ = full_range;
+	}
+
+	/* Fit the picture inside the output, keeping its shape. */
+	double scale = std::min((double)out_w / frame->width, (double)out_h / frame->height);
+	int fit_w = std::max(2, (int)(frame->width * scale + 0.5) & ~1);
+	int fit_h = std::max(2, (int)(frame->height * scale + 0.5) & ~1);
+	fit_w = std::min(fit_w, (int)out_w);
+	fit_h = std::min(fit_h, (int)out_h);
+	int x = ((int)out_w - fit_w) / 2 & ~1;
+	int y = ((int)out_h - fit_h) / 2 & ~1;
+
+	sws_ = sws_getCachedContext(sws_, frame->width, frame->height, (AVPixelFormat)frame->format, fit_w, fit_h,
+				    AV_PIX_FMT_YUV420P, SWS_BICUBIC, nullptr, nullptr, nullptr);
+	if (!sws_)
+		return nullptr;
+	/* Same matrix in and out: only the size changes, not the colours. */
+	const int *coeffs = sws_getCoefficients(SWS_CS_ITU709);
+	sws_setColorspaceDetails(sws_, coeffs, full_range, coeffs, full_range, 0, 1 << 16, 1 << 16);
+
+	if (reconfigure) {
+		/* Black borders; only redrawn when the layout changes. */
+		uint8_t black_y = full_range ? 0 : 16;
+		for (int row = 0; row < (int)out_h; row++)
+			memset(scaled_frame_->data[0] + (size_t)row * scaled_frame_->linesize[0], black_y, out_w);
+		for (int plane = 1; plane < 3; plane++)
+			for (int row = 0; row < (int)out_h / 2; row++)
+				memset(scaled_frame_->data[plane] + (size_t)row * scaled_frame_->linesize[plane], 128,
+				       out_w / 2);
+	}
+
+	uint8_t *dst[4] = {
+		scaled_frame_->data[0] + (size_t)y * scaled_frame_->linesize[0] + x,
+		scaled_frame_->data[1] + (size_t)(y / 2) * scaled_frame_->linesize[1] + x / 2,
+		scaled_frame_->data[2] + (size_t)(y / 2) * scaled_frame_->linesize[2] + x / 2,
+		nullptr,
+	};
+	if (sws_scale(sws_, frame->data, frame->linesize, 0, frame->height, dst, scaled_frame_->linesize) <= 0)
+		return nullptr;
+
+	scaled_frame_->color_range = full_range ? AVCOL_RANGE_JPEG : AVCOL_RANGE_MPEG;
+	/* Keep the matrix output_frame would have picked for the original size. */
+	bool sd = frame->colorspace == AVCOL_SPC_BT470BG || frame->colorspace == AVCOL_SPC_SMPTE170M ||
+		  (frame->colorspace == AVCOL_SPC_UNSPECIFIED && frame->height < 720);
+	scaled_frame_->colorspace = sd ? AVCOL_SPC_SMPTE170M : AVCOL_SPC_BT709;
+	return scaled_frame_;
 }
 
 void StreamDecoder::close_codec(Codec &codec)
@@ -282,6 +373,27 @@ void StreamDecoder::decode_audio(const uint8_t *data, size_t size, int64_t pts_u
 }
 
 void StreamDecoder::output_video(AVFrame *frame, uint64_t ts)
+{
+	uint32_t out_w = out_width_, out_h = out_height_;
+	if (out_w && out_h &&
+	    (frame->width != (int)out_w || frame->height != (int)out_h ||
+	     obs_format((AVPixelFormat)frame->format) == VIDEO_FORMAT_NONE)) {
+		bool full = frame->color_range == AVCOL_RANGE_JPEG || frame->format == AV_PIX_FMT_YUVJ420P ||
+			    frame->format == AV_PIX_FMT_YUVJ422P || frame->format == AV_PIX_FMT_YUVJ444P;
+		/* The decoder's size, so the dock can still say what was cast. */
+		uint32_t cast_w = (uint32_t)frame->width, cast_h = (uint32_t)frame->height;
+		AVFrame *scaled = fit_to_output(frame, out_w, out_h, full);
+		if (scaled) {
+			output_frame(scaled, ts);
+			width_ = cast_w;
+			height_ = cast_h;
+			return;
+		}
+	}
+	output_frame(frame, ts);
+}
+
+void StreamDecoder::output_frame(AVFrame *frame, uint64_t ts)
 {
 	video_format format = obs_format((AVPixelFormat)frame->format);
 	if (format == VIDEO_FORMAT_NONE) {

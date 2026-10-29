@@ -22,7 +22,14 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE vcast-airplay)
 target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE VCAST_HAVE_AIRPLAY)
 target_link_libraries(
   ${CMAKE_PROJECT_NAME}
-  PRIVATE mbedtls mbedx509 mbedcrypto VcastFFmpeg::avcodec VcastFFmpeg::avformat VcastFFmpeg::avutil
+  PRIVATE
+    mbedtls
+    mbedx509
+    mbedcrypto
+    VcastFFmpeg::avcodec
+    VcastFFmpeg::avformat
+    VcastFFmpeg::avutil
+    VcastFFmpeg::swscale
 )
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   # Keep our statically linked mbedTLS private so it never clashes with another copy in OBS.
@@ -84,6 +91,8 @@ target_sources(
   ${CMAKE_PROJECT_NAME}
   PRIVATE
     ${VCAST_CORE_SOURCES}
+    src/miracast/miracast-source.cpp
+    src/miracast/miracast-source.h
     src/plugin-main.cpp
     src/ui/settings-dialog.cpp
     src/ui/settings-dialog.h
@@ -94,7 +103,10 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE src)
 
 if(WIN32)
   target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
-  target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ws2_32 iphlpapi)
+  target_link_libraries(
+    ${CMAKE_PROJECT_NAME}
+    PRIVATE ws2_32 iphlpapi dwmapi ole32 uuid shell32
+  )
 endif()
 
 set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})
@@ -113,6 +125,7 @@ if(VCAST_BUILD_TESTS)
       VcastFFmpeg::avcodec
       VcastFFmpeg::avformat
       VcastFFmpeg::avutil
+      VcastFFmpeg::swscale
   )
   add_executable(vcast-receiver-test tests/receiver-headless.cpp ${VCAST_CORE_SOURCES})
   target_include_directories(vcast-receiver-test PRIVATE src)
@@ -129,6 +142,7 @@ if(VCAST_BUILD_TESTS)
       VcastFFmpeg::avcodec
       VcastFFmpeg::avformat
       VcastFFmpeg::avutil
+      VcastFFmpeg::swscale
   )
 
   if(WIN32)

@@ -18,6 +18,7 @@ check() { # <log> <label>
 	grep -q "connected via" "$1" || { echo "$2: sender never connected"; exit 1; }
 	grep -q "disconnected" "$1" || { echo "$2: sender never disconnected"; exit 1; }
 	[[ "${max% *}" != "x" ]] || { echo "$2: no video decoded"; exit 1; }
+	[[ "${max% *}" == "1920x1080" ]] || { echo "$2: picture is not 1920x1080"; exit 1; }
 	[[ "${max#* }" -gt 48000 ]] || { echo "$2: no audio decoded"; exit 1; }
 	grep -q "DONE leaks=0" "$1" || { echo "$2: memory leak or crash"; exit 1; }
 }

@@ -17,6 +17,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 */
 
 #include "receiver-source.h"
+#include "miracast/miracast-source.h"
 #include "app-ingest.h"
 #include "container-ingest.h"
 #include "receiver.h"
@@ -34,6 +35,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 
 #include <algorithm>
 #include <cstring>
+#include <cstdio>
 #include <atomic>
 #include <fstream>
 #include <memory>
@@ -55,6 +57,18 @@ constexpr uint16_t kWebPort = 8443;
 /* 7000 is taken by macOS' own AirPlay Receiver (Control Center) on most Macs. */
 constexpr uint16_t kAirPlayPortBase = 7100;
 #endif
+
+/* "1920x1080" -> 1920, 1080; anything else (e.g. "device") -> 0, 0. */
+void parse_size(const char *text, uint32_t *width, uint32_t *height)
+{
+	unsigned w = 0, h = 0;
+	if (text && sscanf(text, "%ux%u", &w, &h) == 2 && w && h) {
+		*width = w;
+		*height = h;
+	} else {
+		*width = *height = 0;
+	}
+}
 
 std::string random_id()
 {
@@ -162,6 +176,9 @@ public:
 		bool android = obs_data_get_bool(settings, "android");
 		bool browser = obs_data_get_bool(settings, "browser");
 		set_keep_last_frame(obs_data_get_bool(settings, "keep_last_frame"));
+		uint32_t out_w = 0, out_h = 0;
+		parse_size(obs_data_get_string(settings, "output_size"), &out_w, &out_h);
+		set_output_size(out_w, out_h);
 
 		bool name_changed;
 		{
@@ -589,6 +606,7 @@ void receiver_defaults(obs_data_t *settings)
 	obs_data_set_default_bool(settings, "android", true);
 	obs_data_set_default_bool(settings, "browser", true);
 	obs_data_set_default_bool(settings, "keep_last_frame", false);
+	obs_data_set_default_string(settings, "output_size", "1920x1080");
 }
 
 void *receiver_create(obs_data_t *settings, obs_source_t *source)
@@ -669,6 +687,15 @@ obs_properties_t *receiver_properties(void *ptr)
 	obs_properties_add_bool(props, "android", obs_module_text("Vcast.Receiver.Android"));
 	obs_properties_add_bool(props, "browser", obs_module_text("Vcast.Receiver.Browser"));
 	obs_properties_add_bool(props, "keep_last_frame", obs_module_text("Vcast.Receiver.KeepLastFrame"));
+	obs_property_t *size = obs_properties_add_list(props, "output_size",
+						       obs_module_text("Vcast.Receiver.OutputSize"),
+						       OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_STRING);
+	obs_property_list_add_string(size, "1920 x 1080 (Full HD)", "1920x1080");
+	obs_property_list_add_string(size, "1280 x 720 (HD)", "1280x720");
+	obs_property_list_add_string(size, "2560 x 1440", "2560x1440");
+	obs_property_list_add_string(size, "3840 x 2160 (4K)", "3840x2160");
+	obs_property_list_add_string(size, obs_module_text("Vcast.Receiver.OutputSize.Device"), "device");
+	obs_property_set_long_description(size, obs_module_text("Vcast.Receiver.OutputSize.Tip"));
 	obs_properties_add_button2(props, "fit", obs_module_text("Vcast.FitToScreen"), fit_clicked, data);
 	return props;
 }
@@ -738,7 +765,8 @@ bool fit_scene_item(obs_scene_t *, obs_sceneitem_t *item, void *param)
 		return true;
 	}
 	obs_source_t *source = obs_sceneitem_get_source(item);
-	if (!source || strcmp(obs_source_get_id(source), VCAST_RECEIVER_SOURCE_ID) != 0)
+	if (!source || (strcmp(obs_source_get_id(source), VCAST_RECEIVER_SOURCE_ID) != 0 &&
+			strcmp(obs_source_get_id(source), VCAST_MIRACAST_SOURCE_ID) != 0))
 		return true;
 	if (ctx->only && source != ctx->only)
 		return true;

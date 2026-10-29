@@ -12,6 +12,8 @@ const { chromium } = require('playwright');
       '--use-fake-ui-for-media-stream',
       '--use-fake-device-for-media-stream',
       '--enable-features=GetDisplayMediaSet',
+      // Loopback never goes through an HTTP proxy, WebSockets included.
+      '--proxy-bypass-list=<-loopback>',
     ],
   });
   const context = await browser.newContext({ ignoreHTTPSErrors: true });

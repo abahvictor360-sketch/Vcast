@@ -19,6 +19,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include "vcast-dock.h"
 #include "settings-dialog.h"
 #include "cast-manager.h"
+#include "miracast/miracast-source.h"
 #include "receiver/receiver-source.h"
 
 #include <obs-frontend-api.h>
@@ -64,7 +65,16 @@ VcastDock::VcastDock(QWidget *parent) : QWidget(parent)
 	receiveUrlLabel_->setTextInteractionFlags(Qt::TextBrowserInteraction);
 	receiveUrlLabel_->setOpenExternalLinks(true);
 	layout->addWidget(receiveUrlLabel_);
-	connect(addReceiverButton, &QPushButton::clicked, this, &VcastDock::addReceiver);
+	connect(addReceiverButton, &QPushButton::clicked, this,
+		[this]() { addReceiver(VCAST_RECEIVER_SOURCE_ID, "Vcast.Receiver.Name"); });
+#ifdef _WIN32
+	/* Win + K on laptops, Cast / Smart View on Android (Miracast). */
+	auto *addMiracastButton = new QPushButton(T("Vcast.AddMiracast"), this);
+	addMiracastButton->setToolTip(T("Vcast.AddMiracast.Tip"));
+	layout->insertWidget(layout->indexOf(addReceiverButton) + 1, addMiracastButton);
+	connect(addMiracastButton, &QPushButton::clicked, this,
+		[this]() { addReceiver(VCAST_MIRACAST_SOURCE_ID, "Vcast.Miracast.Name"); });
+#endif
 	auto *fitButton = new QPushButton(T("Vcast.FitToScreen"), this);
 	layout->addWidget(fitButton);
 	connect(fitButton, &QPushButton::clicked, this, []() { vcast_receiver_fit_to_screen(nullptr, false); });
@@ -370,7 +380,7 @@ void VcastDock::copyUrl()
 		QApplication::clipboard()->setText(urlEdit_->text());
 }
 
-void VcastDock::addReceiver()
+void VcastDock::addReceiver(const char *id, const char *name_key)
 {
 	obs_source_t *scene_source = obs_frontend_get_current_scene();
 	obs_scene_t *scene = scene_source ? obs_scene_from_source(scene_source) : nullptr;
@@ -380,18 +390,23 @@ void VcastDock::addReceiver()
 	}
 
 	/* Reuse an existing receiver if there is one, so the AirPlay name stays the same. */
-	obs_source_t *source = nullptr;
+	struct Search {
+		const char *id;
+		obs_source_t *found;
+	} search = {id, nullptr};
 	obs_enum_sources(
 		[](void *param, obs_source_t *candidate) {
-			if (strcmp(obs_source_get_id(candidate), VCAST_RECEIVER_SOURCE_ID) != 0)
+			auto *search = static_cast<Search *>(param);
+			if (strcmp(obs_source_get_id(candidate), search->id) != 0)
 				return true;
-			*static_cast<obs_source_t **>(param) = obs_source_get_ref(candidate);
+			search->found = obs_source_get_ref(candidate);
 			return false;
 		},
-		&source);
+		&search);
+	obs_source_t *source = search.found;
 	if (!source) {
-		std::string name = T("Vcast.Receiver.Name").toStdString();
-		source = obs_source_create(VCAST_RECEIVER_SOURCE_ID, name.c_str(), nullptr, nullptr);
+		std::string name = T(name_key).toStdString();
+		source = obs_source_create(id, name.c_str(), nullptr, nullptr);
 	}
 	if (source && !obs_scene_find_source(scene, obs_source_get_name(source))) {
 		obs_scene_add(scene, source);

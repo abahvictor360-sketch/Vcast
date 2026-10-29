@@ -164,16 +164,39 @@ replaces the current one, like a TV. To show two phones at once, add a second
 *Vcast Screen Receiver* source and give it a different name in its
 properties.
 
-**Android's built-in Cast / Smart View (Windows only).** Samsung Smart View,
-Android "Cast" and the Windows **Win + K** "Cast" button use Miracast, which
-plugins can't receive. Windows has its own Miracast receiver, though:
+### Win + K from a Windows laptop (and Android Cast / Smart View) — Windows PCs only
 
-1. Open **Settings → System → Projecting to this PC**. Install the optional
-   **Wireless Display** feature if asked, and set it to *Available everywhere
-   on secure networks*.
-2. On the phone or laptop, press Cast / Smart View (Win + K on Windows) and
-   pick the OBS computer. A *Connect* window opens on the PC.
-3. In OBS add a **Window Capture** of that Connect window.
+The Windows **Win + K** "Cast" panel, Samsung **Smart View** and Android's
+**Cast / Screen Cast** button use Miracast. Vcast receives it through the
+Miracast receiver built into Windows:
+
+1. **Once:** tick *Enable Win+K casting* in the Vcast installer (it is on by
+   default). Or click **Install Wireless Display** in the source's
+   properties. This adds the Windows feature *Wireless Display*. It needs
+   internet and can take a few minutes. You can also add it yourself under
+   **Settings → System → Optional features → Add a feature → Wireless Display**.
+2. In OBS, click **Add Win+K receiver to scene** in the Vcast dock. Vcast
+   starts Windows' *Wireless Display* window, puts it behind OBS and shows
+   its picture in the source, scaled to fit **1920 × 1080**.
+3. On the laptop press **Win + K** and pick the OBS computer's name. On
+   Android, open Quick Settings → **Cast / Smart View / Screen Cast** and pick
+   the same name.
+4. The first time, Windows on the OBS PC may ask whether to allow the
+   device. Click **Allow** (it is behind OBS; check the taskbar).
+
+Tips:
+
+- Don't close or minimise the *Wireless Display* window while casting.
+  It can stay behind OBS. If it is closed, Vcast reopens it within 30 seconds
+  while the source is visible. Untick *Start Windows' Wireless Display
+  receiver automatically* if you don't want that.
+- The cast's sound comes into the Win+K source. If you hear it twice, mute
+  *Desktop Audio* or untick *Include the cast's sound*.
+- Both PCs need Wi-Fi adapters that support Miracast (most do). If the
+  *Wireless Display* window says the PC can't receive, its Wi-Fi driver
+  doesn't support it. Use the cast web page instead.
+- **Settings → System → Projecting to this PC** controls who may connect.
+  *Available everywhere on secure networks* works best.
 
 ## 5. Show OBS on a TV
 

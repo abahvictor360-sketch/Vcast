@@ -3,13 +3,16 @@
 # system (matching the distribution's OBS build).
 include_guard(GLOBAL)
 
-set(_vcast_ffmpeg_components avcodec avformat avutil)
+set(_vcast_ffmpeg_components avcodec avformat avutil swscale)
 
 foreach(_c IN LISTS _vcast_ffmpeg_components)
   find_path(VCAST_FFMPEG_${_c}_INCLUDE_DIR lib${_c}/${_c}.h PATH_SUFFIXES include)
   find_library(VCAST_FFMPEG_${_c}_LIBRARY NAMES ${_c} lib${_c})
   if(NOT VCAST_FFMPEG_${_c}_INCLUDE_DIR OR NOT VCAST_FFMPEG_${_c}_LIBRARY)
-    message(FATAL_ERROR "FFmpeg ${_c} not found (install libavcodec-dev libavformat-dev libavutil-dev on Linux)")
+    message(
+      FATAL_ERROR
+      "FFmpeg ${_c} not found (install libavcodec-dev libavformat-dev libavutil-dev libswscale-dev on Linux)"
+    )
   endif()
   if(NOT TARGET VcastFFmpeg::${_c})
     add_library(VcastFFmpeg::${_c} UNKNOWN IMPORTED)

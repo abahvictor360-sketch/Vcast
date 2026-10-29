@@ -30,7 +30,10 @@ LicenseFile={#SourceDir}\..\..\..\LICENSE
 SetupLogging=yes
 
 [Messages]
-WelcomeLabel2=This will install Vcast [ver] into OBS Studio.%n%nVcast lets iPhones, Android phones and laptops cast their screen into OBS, and casts OBS to smart TVs on your network.%n%nPlease close OBS Studio before continuing.
+WelcomeLabel2=This will install Vcast [ver] into OBS Studio.%n%nVcast lets iPhones, Android phones and laptops (including Win + K) cast their screen into OBS, and casts OBS to smart TVs on your network.%n%nPlease close OBS Studio before continuing.
+
+[Tasks]
+Name: "wirelessdisplay"; Description: "Enable Win+K casting into OBS (installs Windows' Wireless Display feature; needs internet, can take a few minutes)"
 
 [Files]
 Source: "{#SourceDir}\bin\64bit\*.dll"; DestDir: "{app}\bin\64bit"; Flags: ignoreversion
@@ -43,6 +46,8 @@ Source: "{#SourceDir}\data\*"; DestDir: "{app}\data"; Flags: ignoreversion recur
 ; applies to obs64.exe.
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""Vcast for OBS Studio"""; Flags: runhidden
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""Vcast for OBS Studio"" dir=in action=allow program=""{code:ObsExe}"" enable=yes profile=any"; Flags: runhidden; StatusMsg: "Allowing OBS through Windows Firewall..."
+; Windows' own Miracast receiver, which the "Vcast Win+K Receiver" source shows inside OBS.
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -Command ""Add-WindowsCapability -Online -Name 'App.WirelessDisplay.Connect~~~~0.0.1.0' | Out-Null"""; Flags: runhidden waituntilterminated; Tasks: wirelessdisplay; StatusMsg: "Installing Windows Wireless Display for Win+K casting (this can take a few minutes)..."
 
 [UninstallRun]
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""Vcast for OBS Studio"""; Flags: runhidden; RunOnceId: "VcastFirewall"
