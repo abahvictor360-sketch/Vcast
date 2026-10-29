@@ -50,6 +50,7 @@ private slots:
 	void openSettings();
 	void copyUrl();
 	void addReceiver(const char *id, const char *name_key);
+	void setCanvas1080();
 	void refreshState();
 
 private:
@@ -69,6 +70,8 @@ private:
 	QPushButton *settingsButton_;
 	QPushButton *copyButton_;
 	QLabel *receiveUrlLabel_;
+	QLabel *canvasLabel_;
+	QPushButton *canvasButton_;
 	QLineEdit *urlEdit_;
 	QLabel *statusLabel_;
 	QLabel *clientsLabel_;

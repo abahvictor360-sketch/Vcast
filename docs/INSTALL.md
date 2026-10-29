@@ -89,6 +89,14 @@ In the Vcast dock, click **Add screen receiver to scene**. You can also use
 **+** in *Sources* → **Vcast Screen Receiver**. The device must be on the
 **same Wi‑Fi / network** as the OBS computer.
 
+**1920 × 1080.** Every cast arrives as a 1920 × 1080 picture, scaled to fit
+with black bars when the shape differs (change it under *Picture size* in the
+source's properties). For the **Program output** to be 1920 × 1080 too, OBS
+itself must be set to that size. If it isn't, the Vcast dock shows an orange
+note with a **Set OBS to 1920 x 1080** button. Click it (stop streaming and
+recording first). This is the same as **Settings → Video → Base (Canvas) and
+Output (Scaled) Resolution → 1920x1080**.
+
 | Device | How to cast |
 | --- | --- |
 | **iPhone / iPad** | Open **Control Center** → **Screen Mirroring** → pick **Vcast (your computer name)** |

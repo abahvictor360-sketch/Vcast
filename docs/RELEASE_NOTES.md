@@ -16,4 +16,4 @@ Step-by-step instructions: [docs/INSTALL.md](https://github.com/abahvictor360-sk
 3. **Android:** install the Vcast app, tap **Cast to OBS** (or add the *Cast to OBS* quick-settings tile).
 4. **Laptop:** open the address shown in the dock in Chrome/Edge and press **Share screen**.
 5. **Windows laptop with Win + K, Android Cast / Smart View (OBS on Windows):** click **Add Win+K receiver to scene** in the dock, then press **Win + K** on the laptop and pick the OBS computer.
-Every cast is shown at **1920 × 1080** (scaled to fit, with black bars when the shape differs; change it in the source's properties). The picture is fitted to the screen automatically; use **Fit to screen** if you moved it.
+Every cast is shown at **1920 × 1080** (scaled to fit, with black bars when the shape differs; change it in the source's properties). If OBS itself is not 1920 × 1080, the Vcast dock offers a one-click **Set OBS to 1920 x 1080** button. The picture is fitted to the screen automatically; use **Fit to screen** if you moved it.

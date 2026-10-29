@@ -25,6 +25,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <obs-frontend-api.h>
 
 #include <obs-module.h>
+#include <util/config-file.h>
 
 #include <QApplication>
 #include <QClipboard>
@@ -34,6 +35,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
+#include <QMessageBox>
 #include <QPushButton>
 #include <QTimer>
 #include <QVBoxLayout>
@@ -78,6 +80,17 @@ VcastDock::VcastDock(QWidget *parent) : QWidget(parent)
 	auto *fitButton = new QPushButton(T("Vcast.FitToScreen"), this);
 	layout->addWidget(fitButton);
 	connect(fitButton, &QPushButton::clicked, this, []() { vcast_receiver_fit_to_screen(nullptr, false); });
+
+	/* Program is only 1920 x 1080 when OBS's own canvas is. */
+	canvasLabel_ = new QLabel(this);
+	canvasLabel_->setWordWrap(true);
+	canvasLabel_->setStyleSheet("color: #e0a800;");
+	layout->addWidget(canvasLabel_);
+	canvasButton_ = new QPushButton(T("Vcast.Canvas1080"), this);
+	layout->addWidget(canvasButton_);
+	connect(canvasButton_, &QPushButton::clicked, this, &VcastDock::setCanvas1080);
+	canvasLabel_->hide();
+	canvasButton_->hide();
 
 	auto *line = new QFrame(this);
 	line->setFrameShape(QFrame::HLine);
@@ -417,10 +430,45 @@ void VcastDock::addReceiver(const char *id, const char *name_key)
 	refreshState();
 }
 
+void VcastDock::setCanvas1080()
+{
+	if (obs_video_active()) {
+		QMessageBox::information(this, T("Vcast.Canvas1080"), T("Vcast.Canvas1080.Busy"));
+		return;
+	}
+	config_t *config = obs_frontend_get_profile_config();
+	if (!config)
+		return;
+	config_set_uint(config, "Video", "BaseCX", 1920);
+	config_set_uint(config, "Video", "BaseCY", 1080);
+	config_set_uint(config, "Video", "OutputCX", 1920);
+	config_set_uint(config, "Video", "OutputCY", 1080);
+	config_save_safe(config, "tmp", nullptr);
+	obs_frontend_reset_video();
+	/* The canvas changed size, so every receiver is fitted again. */
+	vcast_receiver_fit_to_screen(nullptr, false);
+	refreshState();
+}
+
 void VcastDock::refreshState()
 {
 	/* Receivers added by hand from the Sources list also fill the screen. */
 	vcast_receiver_fit_to_screen(nullptr, true);
+
+	obs_video_info ovi = {};
+	bool full_hd = !obs_get_video_info(&ovi) || (ovi.base_width == 1920 && ovi.base_height == 1080 &&
+						     ovi.output_width == 1920 && ovi.output_height == 1080);
+	if (!full_hd) {
+		QString text = QString(T("Vcast.Canvas1080.Warning"))
+				       .arg(ovi.base_width)
+				       .arg(ovi.base_height)
+				       .arg(ovi.output_width)
+				       .arg(ovi.output_height);
+		if (canvasLabel_->text() != text)
+			canvasLabel_->setText(text);
+	}
+	canvasLabel_->setVisible(!full_hd);
+	canvasButton_->setVisible(!full_hd);
 
 	std::string web = vcast_receiver_web_url();
 	QString receiveText = web.empty() ? QString()
