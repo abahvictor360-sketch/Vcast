@@ -373,7 +373,8 @@ public:
 	void render()
 	{
 		uint32_t out_w = width(), out_h = height();
-		if (!out_w || !out_h)
+		/* Nothing (transparent) until the receiver is up, like the screen receiver. */
+		if (!out_w || !out_h || !capture_ || state_ != State::Ready)
 			return;
 
 		/* Black bars wherever the cast does not reach. */
@@ -384,8 +385,6 @@ public:
 		while (gs_effect_loop(solid, "Solid"))
 			gs_draw_sprite(nullptr, 0, out_w, out_h);
 
-		if (!capture_ || state_ != State::Ready)
-			return;
 		uint32_t cw = obs_source_get_width(capture_);
 		uint32_t ch = obs_source_get_height(capture_);
 		uint32_t crop = std::min<uint32_t>((uint32_t)std::max(0, crop_top_.load()), ch / 4);
