@@ -1,0 +1,712 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vcast — Cast Any Screen Into OBS</title>
+<meta name="description" content="Vcast is a free OBS Studio plugin: mirror iPhones (AirPlay), Android phones and laptops into OBS over Wi-Fi, scaled to fit, ready for your Program output.">
+<meta name="author" content="Victor Abah">
+<meta name="robots" content="index, follow">
+<meta name="keywords" content="OBS plugin, AirPlay to OBS, screen mirroring OBS, cast iPhone to OBS, cast Android to OBS, wireless screen capture, Vcast">
+<link rel="canonical" href="https://abahvictor360-sketch.github.io/Vcast/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://abahvictor360-sketch.github.io/Vcast/">
+<meta property="og:site_name" content="Vcast">
+<meta property="og:title" content="Vcast — Cast Any Screen Into OBS">
+<meta property="og:description" content="Mirror iPhones, Android phones and laptops into OBS Studio over Wi-Fi. Free and open source.">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Vcast — Cast Any Screen Into OBS">
+<meta name="twitter:description" content="Mirror iPhones, Android phones and laptops into OBS Studio over Wi-Fi. Free and open source.">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Vcast",
+  "description": "Free OBS Studio plugin that mirrors iPhones (AirPlay), Android phones and laptops into OBS over Wi-Fi.",
+  "url": "https://abahvictor360-sketch.github.io/Vcast/",
+  "applicationCategory": "MultimediaApplication",
+  "operatingSystem": "Windows, macOS, Linux, Android",
+  "license": "https://www.gnu.org/licenses/gpl-3.0.html",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "downloadUrl": "https://github.com/abahvictor360-sketch/Vcast/releases/latest",
+  "author": { "@type": "Person", "name": "Victor Abah", "url": "https://github.com/abahvictor360-sketch" }
+}
+</script>
+<meta name="color-scheme" content="light">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0b0d0c; --text: #1a1d1b; --muted: #6b716d; --line: #e8ebe8; --soft: #f5f6f4;
+  --card: #ffffff; --green: #4caf50; --green-ink: #2e7d32; --lime: #b9f0a0; --mint: #dff7e3;
+  --sky: #dcefff; --shadow: 0 1px 2px rgba(11, 13, 12, .04), 0 12px 32px rgba(11, 13, 12, .06);
+  --radius: 22px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; overflow-x: hidden; }
+body { margin: 0; background: #fff; color: var(--text); overflow-x: hidden;
+  font: 15px/1.6 "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+a { color: inherit; }
+img { max-width: 100%; display: block; }
+.wrap { max-width: 1160px; margin: 0 auto; padding: 0 16px; }
+
+/* soft gradient glows */
+.glow { position: absolute; border-radius: 50%; filter: blur(80px); opacity: .7; pointer-events: none; z-index: 0; }
+.glow.g1 { width: 520px; height: 420px; background: var(--mint); top: -120px; left: -140px; }
+.glow.g2 { width: 520px; height: 420px; background: var(--sky); top: 40px; right: -160px; }
+.glow.g3 { width: 460px; height: 360px; background: #ecfbe6; bottom: -80px; left: 30%; }
+
+/* buttons and pills */
+.btn { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 600;
+  border-radius: 999px; padding: 11px 14px 11px 20px; border: 1px solid transparent; cursor: pointer; font-size: .95rem; white-space: nowrap; }
+.btn .arrow { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; }
+.btn-dark { background: var(--ink); color: #fff; }
+.btn-dark .arrow { background: #fff; color: var(--ink); }
+.btn-dark:hover { background: #222624; }
+.btn-light { background: #fff; color: var(--ink); border-color: #d9ddd9; padding: 11px 20px; }
+.btn-light:hover { background: var(--soft); }
+.btn-block { width: 100%; justify-content: center; padding: 13px 20px; }
+.pill { display: inline-flex; align-items: center; gap: 8px; background: #fff; border: 1px solid var(--line);
+  border-radius: 999px; padding: 4px 12px 4px 4px; font-size: .78rem; font-weight: 600; color: var(--muted); box-shadow: var(--shadow); }
+.pill b { background: var(--ink); color: #fff; border-radius: 999px; padding: 2px 9px; font-weight: 600; }
+.eyebrow { display: block; color: var(--green); font-weight: 700; font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 10px; }
+h1, h2, h3 { color: var(--ink); letter-spacing: -.02em; margin: 0; }
+h1 { font-size: clamp(2.3rem, 5.2vw, 3.6rem); line-height: 1.08; font-weight: 800; }
+h2 { font-size: clamp(1.7rem, 3.4vw, 2.4rem); line-height: 1.15; font-weight: 800; }
+h3 { font-size: 1.05rem; font-weight: 700; }
+.sub { color: var(--muted); max-width: 34rem; margin: 14px auto 0; }
+.center { text-align: center; }
+
+/* nav */
+.nav { position: sticky; top: 0; z-index: 20; background: rgba(255, 255, 255, .82); backdrop-filter: blur(14px); }
+.nav .wrap { display: flex; align-items: center; gap: 28px; height: 70px; }
+.logo { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 1.2rem; color: var(--ink); text-decoration: none; }
+.logo .mark { width: 30px; height: 30px; border-radius: 9px; background: var(--ink); display: grid; place-items: center; }
+.links { display: flex; gap: 24px; }
+.links a { text-decoration: none; color: var(--muted); font-weight: 500; font-size: .9rem; }
+.links a:hover { color: var(--ink); }
+.nav .btn { margin-left: auto; }
+@media (max-width: 760px) { .links { display: none; } }
+
+/* hero */
+.hero { position: relative; padding: 56px 0 30px; overflow: hidden; }
+.hero .wrap { position: relative; z-index: 1; }
+.hero-cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 26px; }
+.hero-meta { margin-top: 12px; color: var(--muted); font-size: .85rem; }
+.stage { position: relative; margin: 46px auto 0; max-width: 900px; height: 470px; text-align: left; }
+.phone { position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 236px; height: 470px;
+  background: #0f1110; border-radius: 42px; padding: 11px; box-shadow: 0 40px 80px rgba(11, 13, 12, .18); }
+.phone .screen { width: 100%; height: 100%; border-radius: 32px; background: #fbfcfb; overflow: hidden; position: relative; }
+.phone .notch { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 76px; height: 22px; background: #0f1110; border-radius: 99px; z-index: 2; }
+.cc { padding: 52px 16px 16px; }
+.cc .hello { font-weight: 800; font-size: 1.05rem; color: var(--ink); }
+.cc .hint { font-size: .72rem; color: var(--muted); }
+.cc .sheet { margin-top: 14px; background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 12px; box-shadow: var(--shadow); }
+.cc .sheet-title { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: .82rem; color: var(--ink); margin-bottom: 8px; }
+.cc .row { display: flex; align-items: center; gap: 10px; padding: 9px 8px; border-radius: 12px; font-size: .78rem; font-weight: 600; color: var(--ink); }
+.cc .row.on { background: var(--mint); }
+.cc .row .dot { width: 26px; height: 26px; border-radius: 8px; background: var(--soft); display: grid; place-items: center; flex: none; }
+.cc .row.on .dot { background: var(--green); color: #fff; }
+.cc .row small { display: block; color: var(--muted); font-weight: 500; font-size: .68rem; }
+.cc .row .check { margin-left: auto; color: var(--green-ink); }
+.cc .live { margin-top: 12px; display: flex; gap: 8px; }
+.cc .tile { flex: 1; background: var(--soft); border-radius: 14px; padding: 10px; font-size: .68rem; color: var(--muted); }
+.cc .tile b { display: block; color: var(--ink); font-size: .95rem; }
+.float { position: absolute; background: #fff; border: 1px solid var(--line); border-radius: 20px; padding: 18px; box-shadow: var(--shadow); width: 250px; }
+.float.left { left: 0; top: 70px; }
+.float.right { right: 0; top: 40px; width: 230px; }
+.float p { margin: 6px 0 0; color: var(--muted); font-size: .8rem; }
+.float .big { font-size: 1.6rem; font-weight: 800; color: var(--ink); margin-top: 12px; }
+.chips { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+.chip { font-size: .7rem; font-weight: 700; padding: 4px 10px; border-radius: 99px; background: var(--soft); color: var(--ink); }
+.chip.g { background: var(--mint); color: var(--green-ink); }
+@media (max-width: 860px) {
+  .stage { height: auto; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .phone { position: relative; left: auto; transform: none; }
+  .float { position: relative; left: auto !important; right: auto !important; top: auto !important; width: 100%; max-width: 340px; }
+}
+
+/* works with strip */
+.trusted { padding: 40px 0 20px; text-align: center; }
+.trusted .label { color: var(--muted); font-size: .85rem; font-weight: 600; }
+.logos { display: flex; gap: 34px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
+.logos span { display: inline-flex; align-items: center; gap: 8px; font-weight: 800; color: var(--ink); font-size: 1rem; }
+
+section { position: relative; padding: 80px 0; overflow-x: clip; }
+
+/* numbers */
+.numbers { display: grid; grid-template-columns: 1fr 1.1fr; gap: 48px; align-items: center; }
+@media (max-width: 860px) { .numbers { grid-template-columns: 1fr; } }
+.numbers p { color: var(--muted); max-width: 30rem; }
+.stats { display: flex; gap: 48px; margin-top: 26px; flex-wrap: wrap; }
+.stats b { display: block; font-size: 1.9rem; font-weight: 800; color: var(--ink); letter-spacing: -.02em; }
+.stats span { color: var(--muted); font-size: .85rem; }
+.panel { background: var(--soft); border-radius: var(--radius); padding: 26px; }
+.inner { background: #fff; border-radius: 18px; padding: 20px; box-shadow: var(--shadow); }
+.inner-head { display: flex; align-items: center; justify-content: space-between; }
+.inner-head small { color: var(--muted); }
+.tag-btn { font-size: .72rem; font-weight: 600; border: 1px solid var(--line); border-radius: 99px; padding: 3px 10px; color: var(--muted); }
+.dev { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); font-size: .88rem; }
+.dev:first-of-type { border-top: 0; }
+.dev .ic { width: 34px; height: 34px; border-radius: 10px; background: var(--soft); display: grid; place-items: center; flex: none; }
+.dev .state { margin-left: auto; font-size: .72rem; font-weight: 700; border-radius: 99px; padding: 3px 10px; background: var(--soft); color: var(--muted); }
+.dev .state.on { background: var(--mint); color: var(--green-ink); }
+
+/* features */
+.features { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 40px; }
+@media (max-width: 860px) { .features { grid-template-columns: 1fr; } }
+.feature .eyebrow { margin-bottom: 4px; }
+.feature h3 { font-size: 1.2rem; }
+.feature > p { color: var(--muted); font-size: .9rem; margin: 6px 0 20px; }
+.canvas { background: #111413; border-radius: 12px; aspect-ratio: 16 / 9; display: grid; place-items: center; position: relative; overflow: hidden; }
+.canvas .shot { height: 88%; aspect-ratio: 9 / 19.5; border-radius: 10px; background: linear-gradient(160deg, #9be68a, #6bc4ff); }
+.canvas .badge { position: absolute; left: 10px; top: 10px; font-size: .68rem; font-weight: 700; color: #fff; background: rgba(255, 255, 255, .14); padding: 3px 9px; border-radius: 99px; }
+.canvas .rec { position: absolute; right: 10px; top: 10px; font-size: .68rem; font-weight: 800; color: #ff6b6b; }
+.bar { height: 10px; border-radius: 99px; background: var(--soft); margin-top: 14px; overflow: hidden; }
+.bar i { display: block; height: 100%; width: 72%; background: var(--lime); border-radius: 99px; }
+.mini-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 14px; }
+.mini { background: var(--soft); border-radius: 12px; padding: 10px; font-size: .72rem; color: var(--muted); }
+.mini b { display: block; color: var(--ink); font-size: .9rem; }
+
+/* device bubbles */
+.bubbles { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; margin: 40px auto 0; max-width: 760px; }
+.bubble { width: 64px; height: 64px; border-radius: 50%; background: #fff; box-shadow: var(--shadow); display: grid; place-items: center; border: 1px solid var(--line); }
+.bubble span { font-size: .65rem; font-weight: 800; }
+
+/* downloads (pricing style) */
+.plans { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 40px; }
+@media (max-width: 980px) { .plans { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .plans { grid-template-columns: 1fr; } }
+.plan { background: var(--soft); border-radius: var(--radius); padding: 22px; display: flex; flex-direction: column; gap: 14px; position: relative; }
+.plan.recommended { background: #fff; outline: 2px solid var(--ink); box-shadow: var(--shadow); }
+.plan .rec { position: absolute; top: -11px; left: 22px; background: var(--ink); color: #fff; font-size: .68rem; font-weight: 700; padding: 3px 10px; border-radius: 99px; }
+.plan h3 { font-size: 1.1rem; }
+.plan .req { color: var(--muted); font-size: .8rem; margin-top: -8px; }
+.plan .file { font-weight: 800; color: var(--ink); font-size: 1.05rem; word-break: break-word; }
+.plan .file small { font-weight: 500; color: var(--muted); font-size: .75rem; display: block; }
+.plan ul { list-style: none; margin: 0; padding: 14px; background: #fff; border-radius: 14px; display: grid; gap: 8px; font-size: .82rem; color: var(--muted); }
+.plan.recommended ul { background: var(--soft); }
+.plan li { display: flex; gap: 8px; }
+.plan li::before { content: "✓"; color: var(--green); font-weight: 800; }
+.release-note { margin-top: 20px; text-align: center; color: var(--muted); font-size: .85rem; }
+
+/* guide */
+.steps { display: grid; gap: 16px; margin-top: 40px; }
+.step { background: var(--soft); border-radius: var(--radius); padding: 24px; display: grid; grid-template-columns: 46px 1fr; gap: 18px; }
+.step .n { width: 46px; height: 46px; border-radius: 14px; background: var(--ink); color: #fff; display: grid; place-items: center; font-weight: 800; }
+.step h3 { font-size: 1.1rem; margin-top: 10px; }
+.step .body { color: var(--muted); }
+.step .body b, .step .body strong { color: var(--ink); }
+.step ol { margin: 8px 0 0; padding-left: 20px; }
+.step li { margin: 5px 0; }
+.tabs { display: inline-flex; gap: 4px; background: #fff; border-radius: 99px; padding: 4px; margin: 12px 0 4px; flex-wrap: wrap; box-shadow: var(--shadow); }
+.tab { border: 0; background: transparent; color: var(--muted); padding: 7px 14px; border-radius: 99px; font: inherit; font-weight: 600; font-size: .85rem; cursor: pointer; }
+.tab[aria-selected="true"] { background: var(--ink); color: #fff; }
+.panel-t[hidden] { display: none; }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: #fff; border: 1px solid var(--line); padding: 1px 6px; border-radius: 6px; font-size: .85em; color: var(--ink); }
+.note { margin-top: 12px; background: #fff; border-radius: 14px; padding: 12px 14px; font-size: .88rem; color: var(--muted); border-left: 4px solid var(--green); }
+
+/* open source callout (testimonial-style) */
+.callout { text-align: center; max-width: 720px; margin: 0 auto; }
+.callout .quote { font-size: clamp(1.3rem, 2.6vw, 1.8rem); font-weight: 700; color: var(--ink); line-height: 1.35; margin: 18px 0; letter-spacing: -.01em; }
+.callout .who { color: var(--muted); font-size: .85rem; }
+
+/* faq */
+.faq { max-width: 820px; margin: 36px auto 0; display: grid; gap: 10px; }
+details { background: var(--soft); border-radius: 16px; padding: 16px 20px; }
+summary { cursor: pointer; font-weight: 700; color: var(--ink); list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+summary::-webkit-details-marker { display: none; }
+summary::after { content: "+"; font-weight: 800; }
+details[open] summary::after { content: "–"; }
+details p, details li { color: var(--muted); font-size: .92rem; }
+details ul { padding-left: 18px; margin: 10px 0 0; }
+
+/* get the app */
+.getapp { background: var(--soft); border-radius: 28px; padding: 44px; display: grid; grid-template-columns: 1.1fr .9fr; gap: 30px; align-items: center; overflow: hidden; position: relative; }
+@media (max-width: 860px) { .getapp { grid-template-columns: 1fr; padding: 28px; } }
+.getapp p { color: var(--muted); }
+.getapp .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+.mini-phone { justify-self: center; width: 230px; background: #0f1110; border-radius: 38px; padding: 10px; box-shadow: 0 30px 60px rgba(11, 13, 12, .16); }
+.mini-phone .screen { background: #fff; border-radius: 29px; padding: 30px 18px 22px; text-align: center; }
+.mini-phone h4 { margin: 0; color: var(--ink); font-size: .95rem; }
+.mini-phone small { display: block; color: var(--muted); font-size: .72rem; margin: 6px 0 14px; }
+.mini-phone img { width: 140px; margin: 0 auto; }
+
+/* footer */
+footer { padding: 60px 0 40px; }
+.foot { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 30px; }
+@media (max-width: 860px) { .foot { grid-template-columns: 1fr 1fr; } }
+.foot h5 { margin: 0 0 12px; font-size: .9rem; color: var(--ink); }
+.foot a { display: block; text-decoration: none; color: var(--muted); font-size: .88rem; margin: 6px 0; }
+.foot a:hover { color: var(--ink); }
+.foot p { color: var(--muted); font-size: .88rem; max-width: 18rem; }
+.store { display: inline-flex; align-items: center; gap: 8px; background: var(--ink); color: #fff !important; border-radius: 10px; padding: 8px 12px; margin: 4px 0 !important; font-weight: 600; }
+.legal { border-top: 1px solid var(--line); margin-top: 36px; padding-top: 20px; color: var(--muted); font-size: .82rem; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="logo" href="#top">
+      <span class="mark"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#b9f0a0" stroke-width="2.4" stroke-linecap="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M3 20a3 3 0 0 1 3 0"/></svg></span>
+      Vcast
+    </a>
+    <nav class="links">
+      <a href="#features">Features</a>
+      <a href="#download">Download</a>
+      <a href="#guide">Guide</a>
+      <a href="#faq">FAQ</a>
+      <a href="https://github.com/abahvictor360-sketch/Vcast">GitHub</a>
+    </nav>
+    <a class="btn btn-dark" href="#download">Get Vcast <span class="arrow"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M7 17 17 7M8 7h9v9"/></svg></span></a>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="glow g1"></div><div class="glow g2"></div>
+    <div class="wrap center">
+      <span class="pill"><b>New</b> AirPlay, Android &amp; laptop casting for OBS</span>
+      <h1 style="margin-top:18px">Cast Any Screen<br>Into OBS Studio</h1>
+      <p class="sub">Mirror an iPhone, Android phone or laptop over Wi‑Fi, straight into your scene. It fits to the screen automatically, so it's ready for your Program output.</p>
+      <div class="hero-cta">
+        <a class="btn btn-dark" id="hero-download" href="https://github.com/abahvictor360-sketch/Vcast/releases/latest">
+          <span id="hero-label">Download Vcast</span>
+          <span class="arrow"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg></span>
+        </a>
+        <a class="btn btn-light" href="#guide">See how it works</a>
+      </div>
+      <p class="hero-meta" id="hero-meta">Free plugin for OBS Studio 32.2+ · Windows, macOS &amp; Linux</p>
+
+      <div class="stage">
+        <div class="float left">
+          <h3>Auto fit to Program</h3>
+          <p>Portrait or landscape, every cast scales to fill your canvas and keeps fitting when the phone rotates.</p>
+          <div class="big">1080p60</div>
+          <div class="chips"><span class="chip g">AirPlay</span><span class="chip">Android app</span><span class="chip">Browser</span></div>
+        </div>
+        <div class="phone" aria-label="iPhone Screen Mirroring showing the Vcast receiver">
+          <div class="screen">
+            <div class="notch"></div>
+            <div class="cc">
+              <div class="hello">Screen Mirroring</div>
+              <div class="hint">Choose where to show your iPhone</div>
+              <div class="sheet">
+                <div class="sheet-title">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8"/></svg>
+                  Devices
+                </div>
+                <div class="row on">
+                  <span class="dot"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><rect x="3" y="4" width="18" height="12" rx="2"/></svg></span>
+                  <span>Vcast (Studio-PC)<small>OBS Studio</small></span>
+                  <span class="check">✓</span>
+                </div>
+                <div class="row">
+                  <span class="dot"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><rect x="2" y="5" width="20" height="13" rx="2"/></svg></span>
+                  <span>Living Room TV<small>Apple TV</small></span>
+                </div>
+              </div>
+              <div class="live">
+                <div class="tile"><b>Live</b>in Program</div>
+                <div class="tile"><b>Audio</b>included</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="float right">
+          <h3>Open source &amp; private</h3>
+          <p>Free under GPL-3.0. Everything stays on your local network; nothing goes through the internet.</p>
+          <div class="chips"><span class="chip g">No account</span><span class="chip">No cloud</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="trusted">
+    <div class="wrap">
+      <div class="label">Works with the devices you already have</div>
+      <div class="logos">
+        <span><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M16.4 12.6c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9-.8 0-2-.9-3.4-.9-1.7 0-3.3 1-4.2 2.6-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.6 1.3-.1 1.8-.8 3.3-.8 1.6 0 2 .8 3.4.8 1.4 0 2.3-1.3 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9-.1 0-2.7-1-2.7-4.1zM13.9 5c.7-.9 1.2-2 1-3.2-1 0-2.3.7-3 1.6-.7.8-1.2 2-1.1 3.1 1.2.1 2.4-.6 3.1-1.5z"/></svg>AirPlay</span>
+        <span><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 9.5 19 7l-.9-.5-1.5 2.6A9 9 0 0 0 12 8a9 9 0 0 0-4.6 1.1L5.9 6.5 5 7l1.5 2.5A8.5 8.5 0 0 0 3 16h18a8.5 8.5 0 0 0-3.5-6.5zM8 13.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2zm8 0a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg>Android</span>
+        <span><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5l7-1v7H3zm8-1.2L21 2v9H11zM3 12h7v7l-7-1zm8 0h10v9l-10-1.5z"/></svg>Windows</span>
+        <span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><path d="M12 8.5h8.5M9 14l-4.3 7.4M15 14l-4.3 7.4" /></svg>Chrome</span>
+        <span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>OBS Studio</span>
+      </div>
+    </div>
+  </div>
+
+  <section>
+    <div class="wrap numbers">
+      <div>
+        <span class="eyebrow">Why Vcast</span>
+        <h2>One Source For Every<br>Screen In The Room</h2>
+        <p style="margin-top:14px">Add a single <b>Vcast Screen Receiver</b> to your scene. When a guest casts from their phone or laptop, they appear in your Program output. When someone else casts, they take over, just like a smart TV.</p>
+        <div class="stats">
+          <div><b>3 ways</b><span>AirPlay, Android app, browser</span></div>
+          <div><b>0 cables</b><span>Everything over Wi‑Fi</span></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="inner">
+          <div class="inner-head"><h3>Screen Receiver</h3><span class="tag-btn">Live</span></div>
+          <small style="color:var(--muted)">Devices that can cast to this OBS</small>
+          <div style="margin-top:10px">
+            <div class="dev"><span class="ic">📱</span><span><b>iPhone</b><br><small style="color:var(--muted)">Screen Mirroring</small></span><span class="state on">Showing</span></div>
+            <div class="dev"><span class="ic">🤖</span><span><b>Pixel</b><br><small style="color:var(--muted)">Vcast app · Quick Settings tile</small></span><span class="state">Ready</span></div>
+            <div class="dev"><span class="ic">💻</span><span><b>Laptop</b><br><small style="color:var(--muted)">Chrome · Share screen</small></span><span class="state">Ready</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="features" style="padding-top:20px">
+    <div class="glow g3"></div>
+    <div class="wrap" style="position:relative;z-index:1">
+      <div class="center">
+        <span class="eyebrow">Vcast features</span>
+        <h2>Unlock Wireless Casting In OBS</h2>
+        <p class="sub">Built for streams, classrooms, churches and events: guests show their screen without cables or extra software on your PC.</p>
+      </div>
+      <div class="features">
+        <div class="panel feature">
+          <span class="eyebrow">AirPlay</span>
+          <h3>iPhone, iPad &amp; Mac Mirroring</h3>
+          <p>OBS appears in Control Center → Screen Mirroring. No app to install on the Apple device, and sound comes too.</p>
+          <div class="inner">
+            <div class="inner-head"><b style="color:var(--ink)">Vcast (Studio-PC)</b><span class="tag-btn">AirPlay</span></div>
+            <div class="mini-grid">
+              <div class="mini"><b>H.264</b>video</div>
+              <div class="mini"><b>AAC</b>audio</div>
+              <div class="mini"><b>Auto</b>discovery</div>
+            </div>
+            <div class="bar"><i></i></div>
+          </div>
+        </div>
+        <div class="panel feature">
+          <span class="eyebrow">Program ready</span>
+          <h3>Scaled To Fit, Automatically</h3>
+          <p>The cast fills your canvas while keeping its shape. Use <b>Fit to screen</b> any time to snap it back.</p>
+          <div class="inner">
+            <div class="canvas"><span class="badge">Program</span><span class="rec">● LIVE</span><div class="shot"></div></div>
+          </div>
+        </div>
+        <div class="panel feature">
+          <span class="eyebrow">Android</span>
+          <h3>One Tap From Quick Settings</h3>
+          <p>The free Vcast app finds OBS automatically. Add the <b>Cast to OBS</b> tile and casting is one swipe and one tap.</p>
+          <div class="inner">
+            <div class="inner-head"><b style="color:var(--ink)">Cast to OBS</b><span class="tag-btn">Tile</span></div>
+            <div class="mini-grid">
+              <div class="mini"><b>1080p</b>H.264</div>
+              <div class="mini"><b>Phone</b>audio*</div>
+              <div class="mini"><b>Rotate</b>auto</div>
+            </div>
+            <small style="color:var(--muted);display:block;margin-top:10px">*Android 10 and newer</small>
+          </div>
+        </div>
+        <div class="panel feature">
+          <span class="eyebrow">Any laptop</span>
+          <h3>Share From A Browser</h3>
+          <p>Windows, Mac, Linux or Chromebook: open the cast page, press <b>Share screen</b>, and pick a window or the whole screen.</p>
+          <div class="inner">
+            <div class="inner-head"><b style="color:var(--ink)">https://192.168.1.20:8443</b><span class="tag-btn">Secure</span></div>
+            <div class="mini-grid">
+              <div class="mini"><b>Chrome</b>Edge</div>
+              <div class="mini"><b>Firefox</b>VP8/VP9</div>
+              <div class="mini"><b>Safari</b>MP4</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-top:20px">
+    <div class="wrap center">
+      <span class="eyebrow">Integration</span>
+      <h2>Seamless With Your Setup</h2>
+      <p class="sub">Vcast is a normal OBS source, so it works with your scenes, filters, transitions, recordings and streams. It can also send your OBS output to a smart TV.</p>
+      <div class="bubbles">
+        <div class="bubble"><span>OBS</span></div><div class="bubble"><span>iOS</span></div><div class="bubble"><span>iPadOS</span></div>
+        <div class="bubble"><span>macOS</span></div><div class="bubble"><span>Android</span></div><div class="bubble"><span>Windows</span></div>
+        <div class="bubble"><span>Linux</span></div><div class="bubble"><span>Chrome</span></div><div class="bubble"><span>Edge</span></div>
+        <div class="bubble"><span>Firefox</span></div><div class="bubble"><span>Safari</span></div><div class="bubble"><span>DLNA TV</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="download">
+    <div class="wrap">
+      <div class="center">
+        <span class="eyebrow">Download</span>
+        <h2>Free For Every Platform</h2>
+        <p class="sub">Close OBS, install the file for your computer, then open OBS again. Requires <b>OBS Studio 32.2 or newer</b> (check Help → About).</p>
+      </div>
+      <div class="plans">
+        <div class="plan" data-os="windows">
+          <span class="rec" hidden>Recommended for you</span>
+          <h3>Windows</h3><div class="req">Windows 10 / 11, 64-bit</div>
+          <div class="file" data-file="windows">Installer<small>.exe · sets up the firewall for you</small></div>
+          <a class="btn btn-dark btn-block" data-link="windows" href="https://github.com/abahvictor360-sketch/Vcast/releases/latest">Download for Windows</a>
+          <ul><li>AirPlay receiver</li><li>Android &amp; browser casting</li><li>Cast OBS to a TV</li></ul>
+        </div>
+        <div class="plan" data-os="mac">
+          <span class="rec" hidden>Recommended for you</span>
+          <h3>macOS</h3><div class="req">macOS 13+, Apple Silicon &amp; Intel</div>
+          <div class="file" data-file="mac">Installer<small>.pkg · universal</small></div>
+          <a class="btn btn-dark btn-block" data-link="mac" href="https://github.com/abahvictor360-sketch/Vcast/releases/latest">Download for Mac</a>
+          <ul><li>AirPlay receiver</li><li>Android &amp; browser casting</li><li>Cast OBS to a TV</li></ul>
+        </div>
+        <div class="plan" data-os="linux">
+          <span class="rec" hidden>Recommended for you</span>
+          <h3>Linux</h3><div class="req">Ubuntu 24.04, x86_64</div>
+          <div class="file" data-file="linux">Package<small>.deb</small></div>
+          <a class="btn btn-dark btn-block" data-link="linux" href="https://github.com/abahvictor360-sketch/Vcast/releases/latest">Download for Linux</a>
+          <ul><li>AirPlay receiver</li><li>Android &amp; browser casting</li><li>Cast OBS to a TV</li></ul>
+        </div>
+        <div class="plan" data-os="android">
+          <span class="rec" hidden>Recommended for you</span>
+          <h3>Android app</h3><div class="req">Android 8+ phone or tablet</div>
+          <div class="file" data-file="android">Vcast app<small>.apk · sender for your phone</small></div>
+          <a class="btn btn-dark btn-block" data-link="android" href="https://github.com/abahvictor360-sketch/Vcast/releases/latest">Get the Android app</a>
+          <ul><li>Finds OBS automatically</li><li>Quick Settings tile</li><li>Screen + phone audio</li></ul>
+        </div>
+      </div>
+      <p class="release-note" id="release-note">Files come from the <a href="https://github.com/abahvictor360-sketch/Vcast/releases/latest">latest GitHub release</a>.</p>
+    </div>
+  </section>
+
+  <section id="guide" style="padding-top:20px">
+    <div class="wrap">
+      <div class="center">
+        <span class="eyebrow">Guide</span>
+        <h2>Set It Up In 4 Steps</h2>
+        <p class="sub">Your phone or laptop must be on the <b>same Wi‑Fi network</b> as the computer running OBS.</p>
+      </div>
+      <div class="steps">
+        <div class="step"><div class="n">1</div><div class="body">
+          <h3>Install the plugin</h3>
+          <div class="tabs" role="tablist" data-group="install">
+            <button class="tab" role="tab" data-tab="win">Windows</button>
+            <button class="tab" role="tab" data-tab="mac">macOS</button>
+            <button class="tab" role="tab" data-tab="lin">Linux</button>
+          </div>
+          <div class="panel-t" data-group="install" data-panel="win"><ol>
+            <li>Close OBS, then double-click <b>vcast-…-windows-x64-Installer.exe</b>.</li>
+            <li>If Windows says <i>"Windows protected your PC"</i>, click <b>More info → Run anyway</b>. The installer isn't code-signed yet.</li>
+            <li>Click <b>Install</b>. It also allows OBS through Windows Firewall so phones can reach it.</li>
+          </ol></div>
+          <div class="panel-t" data-group="install" data-panel="mac" hidden><ol>
+            <li>Close OBS, then double-click <b>vcast-…-macos-universal.pkg</b>.</li>
+            <li>If macOS blocks it, <b>right-click the .pkg → Open → Open</b>. You can also use <b>System Settings → Privacy &amp; Security → Open Anyway</b>.</li>
+            <li>When OBS starts, allow <b>Local Network</b> access and <b>incoming connections</b> if asked.</li>
+          </ol></div>
+          <div class="panel-t" data-group="install" data-panel="lin" hidden><ol>
+            <li>Run <code>sudo apt install ./vcast-*-x86_64-linux-gnu.deb</code>, then start OBS.</li>
+          </ol></div>
+        </div></div>
+
+        <div class="step"><div class="n">2</div><div class="body">
+          <h3>Add the screen receiver</h3>
+          <p>In OBS, open <b>Docks → Vcast</b> and click <b>Add screen receiver to scene</b>. You can also add it from <b>Sources → + → Vcast Screen Receiver</b>. It joins your live scene and fills the screen.</p>
+        </div></div>
+
+        <div class="step"><div class="n">3</div><div class="body">
+          <h3>Cast from your device</h3>
+          <div class="tabs" role="tablist" data-group="cast">
+            <button class="tab" role="tab" data-tab="ios">iPhone / iPad / Mac</button>
+            <button class="tab" role="tab" data-tab="android">Android</button>
+            <button class="tab" role="tab" data-tab="laptop">Laptop</button>
+          </div>
+          <div class="panel-t" data-group="cast" data-panel="ios"><ol>
+            <li>Open <b>Control Center</b> (on Mac, the Control Center icon in the menu bar).</li>
+            <li>Tap <b>Screen Mirroring</b>.</li>
+            <li>Choose <b>Vcast (your computer's name)</b>. Screen and sound appear in OBS.</li>
+          </ol></div>
+          <div class="panel-t" data-group="cast" data-panel="android" hidden><ol>
+            <li>Install the <b>Vcast</b> app from the download above, or open <code>https://&lt;your-PC&gt;:8443/android</code> on the phone. Allow installing apps from your browser when asked.</li>
+            <li>Open Vcast, tap your OBS computer, then <b>Cast screen</b>. If Android offers a choice, pick <b>Entire screen</b> (not a single app), then tap <b>Start now</b>. Tick <b>Share phone audio</b> first for sound (Android 10+).</li>
+            <li>Add the <b>Cast to OBS</b> tile to Quick Settings (swipe down twice → pencil icon → drag the tile) for one-tap casting.</li>
+          </ol>
+          <p class="note">Android's built-in "Cast" button only works with Google-certified devices, so OBS can't appear there. The Vcast app and its tile take its place.</p></div>
+          <div class="panel-t" data-group="cast" data-panel="laptop" hidden><ol>
+            <li>Find the cast page address in the Vcast dock, e.g. <code>https://192.168.1.20:8443</code>.</li>
+            <li>Open it in Chrome, Edge, Firefox or Safari. The first time, click <b>Advanced → Proceed</b> on the certificate warning; the certificate is private to your computer.</li>
+            <li>Press <b>Share screen</b>, choose a screen or window, and tick <i>share audio</i> for sound.</li>
+          </ol><p style="margin-top:10px"><b>Windows laptop, OBS on Windows:</b> just press <b>Win + K</b> and pick the OBS computer. Add the <b>Vcast Win+K Receiver</b> first (Vcast dock → <i>Add Win+K receiver to scene</i>).</p></div>
+        </div></div>
+
+        <div class="step"><div class="n">4</div><div class="body">
+          <h3>Go live</h3>
+          <p>The cast appears in your <b>Program</b> output. Stream, record or project it like any other source. To show two phones side by side, add a second receiver with a different name.</p>
+        </div></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap callout">
+      <span class="eyebrow">Open source</span>
+      <div class="quote">"Built in the open so anyone can check how it works, report a problem or help improve it."</div>
+      <div class="who">Created by <a href="https://github.com/abahvictor360-sketch">Victor Abah</a> · GPL-3.0 licensed · AirPlay support builds on <a href="https://github.com/FDH2/UxPlay">UxPlay</a></div>
+    </div>
+  </section>
+
+  <section id="faq" style="padding-top:10px">
+    <div class="wrap">
+      <div class="center">
+        <span class="eyebrow">Help</span>
+        <h2>Troubleshooting &amp; FAQ</h2>
+      </div>
+      <div class="faq">
+        <details><summary>My iPhone doesn't show "Vcast" in Screen Mirroring</summary><ul>
+          <li>Make sure the iPhone and the OBS computer are on the same Wi‑Fi, with no VPN on either.</li>
+          <li>Guest networks and "AP/client isolation" on some routers hide devices from each other.</li>
+          <li>The <b>Vcast Screen Receiver</b> source must exist with <b>Accept AirPlay</b> ticked.</li>
+          <li>Windows: allow OBS through the firewall. Mac: allow OBS under Privacy &amp; Security → Local Network.</li>
+        </ul></details>
+        <details><summary>Why isn't OBS in my Android phone's Cast menu?</summary>
+          <p>Android's Cast menu (Google Cast / Chromecast) only lists devices with a security certificate issued by Google, which no PC software can get. The free Vcast app and its <b>Cast to OBS</b> tile give you the same one-tap experience. If OBS runs on Windows, Android's <b>Cast / Smart View</b> (Miracast) and a laptop's <b>Win + K</b> also work: add the <b>Vcast Win+K Receiver</b> source.</p></details>
+        <details><summary>Which phones work?</summary><ul>
+          <li><b>iPhone and iPad:</b> any model with <b>Screen Mirroring</b> in Control Center. Nothing to install on the phone.</li>
+          <li><b>Mac:</b> Screen Mirroring in the menu bar, no app needed.</li>
+          <li><b>Android:</b> Android 8.0 or newer with the free Vcast app. Phone sound needs Android 10 or newer.</li>
+        </ul></details>
+        <details><summary>The Android app doesn't find my computer</summary><ul>
+          <li>Check that OBS is open and has a <b>Vcast Screen Receiver</b> with <i>Accept the Vcast Android app</i> ticked.</li>
+          <li>Phone and computer must be on the same Wi‑Fi (not a guest network), with no VPN.</li>
+          <li>Tap <b>Connect by address</b> and type the IP shown in the Vcast dock, e.g. <code>192.168.1.20</code>.</li>
+          <li>Windows: set the Wi‑Fi to <b>Private</b>. Firewalls must allow UDP 48689 and TCP 48690.</li>
+        </ul></details>
+        <details><summary>Some apps show a black screen or no sound</summary>
+          <p>Netflix, Disney+, Prime Video, banking apps and similar protected apps block screen recording, on iPhone and Android alike, so they show black in OBS. On Android, a few apps also refuse to share their sound. This is the app's choice and no casting tool can get around it. YouTube, games, photos, browsers and most apps work.</p></details>
+        <details><summary>How do I stop casting?</summary>
+          <p><b>iPhone/iPad:</b> Control Center → Screen Mirroring → <b>Stop Mirroring</b>. <b>Android:</b> tap <b>Stop</b> in the app or in its notification, or tap the <b>Cast to OBS</b> tile again. <b>Laptop:</b> press <b>Stop sharing</b>. Tick <i>Keep showing the last picture</i> in the receiver's properties if you don't want OBS to go blank.</p></details>
+        <details><summary>The picture is choppy or delayed</summary>
+          <p>Move closer to the router or use 5 GHz Wi‑Fi. Choose <b>720p</b> in the Android app or on the laptop cast page. A short delay (well under a second) is normal over Wi‑Fi.</p></details>
+        <details><summary>OBS says the plugin failed to load</summary>
+          <p>Update OBS to 32.2 or newer (Help → About). Then check Help → Log Files → View Current Log for lines starting with <code>[vcast]</code>.</p></details>
+        <details><summary>Is it free? Is it safe?</summary>
+          <p>Yes. Vcast is free, open source software. Everything stays on your local network.</p></details>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-top:20px">
+    <div class="wrap">
+      <div class="getapp">
+        <div>
+          <span class="eyebrow">Android</span>
+          <h2>Get Vcast On Your Phone!</h2>
+          <p>Scan the code with your phone's camera to open the download page, then tap <b>Get the Android app</b>. Or install the plugin on your computer first; OBS shows the app link in the Vcast dock.</p>
+          <div class="actions">
+            <a class="btn btn-dark" data-link="android" href="https://github.com/abahvictor360-sketch/Vcast/releases/latest">Get the Android app <span class="arrow"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg></span></a>
+            <a class="btn btn-light" href="#guide">Setup guide</a>
+          </div>
+        </div>
+        <div class="mini-phone"><div class="screen">
+          <h4>Get Vcast on your phone!</h4>
+          <small>Scan the QR code to download</small>
+          <img src="qr-download.svg" alt="QR code linking to the Vcast download page">
+        </div></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot">
+      <div>
+        <a class="logo" href="#top" style="margin:0 0 10px">
+          <span class="mark"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#b9f0a0" stroke-width="2.4" stroke-linecap="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M3 20a3 3 0 0 1 3 0"/></svg></span>Vcast
+        </a>
+        <p>Cast iPhones, Android phones and laptops into OBS Studio over your local network.</p>
+      </div>
+      <div>
+        <h5>Product</h5>
+        <a href="#features">Features</a><a href="#download">Download</a><a href="#guide">Setup guide</a>
+      </div>
+      <div>
+        <h5>Support</h5>
+        <a href="#faq">FAQ</a>
+        <a href="https://github.com/abahvictor360-sketch/Vcast/blob/HEAD/docs/INSTALL.md">Full guide</a>
+        <a href="https://github.com/abahvictor360-sketch/Vcast/issues">Report a problem</a>
+      </div>
+      <div>
+        <h5>Get Vcast</h5>
+        <a class="store" data-link="windows" href="https://github.com/abahvictor360-sketch/Vcast/releases/latest">⬇ Windows</a>
+        <a class="store" data-link="mac" href="https://github.com/abahvictor360-sketch/Vcast/releases/latest">⬇ macOS</a>
+        <a class="store" data-link="android" href="https://github.com/abahvictor360-sketch/Vcast/releases/latest">⬇ Android</a>
+      </div>
+    </div>
+    <div class="legal">
+      <span>Created by <a href="https://github.com/abahvictor360-sketch" style="color:inherit">Victor Abah</a> · © 2026 · GPL-3.0</span>
+      <span><a href="https://github.com/abahvictor360-sketch/Vcast" style="color:inherit">Source on GitHub</a></span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const REPO = 'abahvictor360-sketch/Vcast';
+  const ua = navigator.userAgent;
+  const os = /Android/.test(ua) ? 'android'
+    : /iPhone|iPad|iPod/.test(ua) ? 'ios'
+    : /Mac OS X/.test(ua) ? 'mac'
+    : /Windows/.test(ua) ? 'windows'
+    : /Linux|X11/.test(ua) ? 'linux' : 'windows';
+
+  document.querySelectorAll('.tabs').forEach((list) => {
+    const group = list.dataset.group;
+    const tabs = list.querySelectorAll('.tab');
+    const select = (name) => {
+      tabs.forEach((t) => t.setAttribute('aria-selected', String(t.dataset.tab === name)));
+      document.querySelectorAll(`.panel-t[data-group="${group}"]`).forEach((p) => { p.hidden = p.dataset.panel !== name; });
+    };
+    tabs.forEach((t) => t.addEventListener('click', () => select(t.dataset.tab)));
+    select(group === 'install'
+      ? ({ windows: 'win', mac: 'mac', linux: 'lin' }[os] || 'win')
+      : ({ ios: 'ios', mac: 'ios', android: 'android' }[os] || 'laptop'));
+  });
+
+  const recommended = os === 'ios' ? 'mac' : os;
+  const plan = document.querySelector(`.plan[data-os="${recommended}"]`);
+  if (plan) { plan.classList.add('recommended'); plan.querySelector('.rec').hidden = false; }
+  const labels = { windows: 'Download for Windows', mac: 'Download for Mac', linux: 'Download for Linux', android: 'Get the Android app', ios: 'Download for your Mac or PC' };
+  document.getElementById('hero-label').textContent = labels[os];
+  if (os === 'ios') document.getElementById('hero-meta').textContent =
+    'Nothing to install on iPhone: put Vcast on the computer running OBS, then use Screen Mirroring.';
+
+  const patterns = {
+    windows: /windows-x64.*Installer\.exe$/i,
+    mac: /macos.*\.pkg$/i,
+    linux: /x86_64-linux-gnu\.deb$/i,
+    android: /\.apk$/i,
+  };
+  fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { headers: { Accept: 'application/vnd.github+json' } })
+    .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+    .then((release) => {
+      for (const [key, re] of Object.entries(patterns)) {
+        const asset = (release.assets || []).find((a) => re.test(a.name) && !/dbgsym/.test(a.name));
+        if (!asset) continue;
+        const mb = (asset.size / 1048576).toFixed(1);
+        document.querySelectorAll(`[data-link="${key}"]`).forEach((a) => { a.href = asset.browser_download_url; });
+        document.querySelectorAll(`[data-file="${key}"]`).forEach((el) => {
+          el.innerHTML = `${asset.name.replace(/</g, '&lt;')}<small>${mb} MB</small>`;
+        });
+        if (key === recommended) document.getElementById('hero-download').href = asset.browser_download_url;
+      }
+      document.getElementById('release-note').innerHTML =
+        `Version <b>${release.tag_name}</b> · released ${new Date(release.published_at).toLocaleDateString()} · ` +
+        `<a href="${release.html_url}">Release notes &amp; checksums</a>`;
+    })
+    .catch(() => {});
+})();
+</script>
+</body>
+</html>
